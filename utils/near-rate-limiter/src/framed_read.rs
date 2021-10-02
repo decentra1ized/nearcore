@@ -58,6 +58,29 @@ pub struct ThrottleController {
     semaphore: PollSemaphore,
 }
 
+// NB: deliberately not `Clone`
+pub struct ThrottleToken {
+    throttle_controller: ThrottleController,
+    msg_len: usize,
+}
+
+impl ThrottleToken {
+    pub fn new(throttle_controller: ThrottleController, msg_len: usize) -> Self {
+        throttle_controller.add_msg(msg_len);
+        Self { throttle_controller, msg_len }
+    }
+
+    pub fn into_inner(&self) -> ThrottleController {
+        self.throttle_controller.clone()
+    }
+}
+
+impl Drop for ThrottleToken {
+    fn drop(&mut self) {
+        self.throttle_controller.remove_msg(self.msg_len)
+    }
+}
+
 impl ThrottleController {
     /// Initialize `ThrottleController`.
     ///
@@ -80,22 +103,28 @@ impl ThrottleController {
 
     // Check whenever
     fn is_ready(&self) -> bool {
-        self.num_messages_in_progress.load(Ordering::SeqCst) < self.max_num_messages_in_progress
-            && self.total_sizeof_messages_in_progress.load(Ordering::SeqCst)
-                < self.max_total_sizeof_messages_in_progress
+        ((self.num_messages_in_progress.load(Ordering::SeqCst) < self.max_num_messages_in_progress)
+            || self.max_num_messages_in_progress == 0)
+            && ((self.total_sizeof_messages_in_progress.load(Ordering::SeqCst)
+                < self.max_total_sizeof_messages_in_progress)
+                || self.max_total_sizeof_messages_in_progress == 0)
     }
 
     // Increase limits by size of the message
     pub fn add_msg(&self, msg_size: usize) {
         self.num_messages_in_progress.fetch_add(1, Ordering::SeqCst);
-        self.total_sizeof_messages_in_progress.fetch_add(msg_size, Ordering::SeqCst);
+        if msg_size != 0 {
+            self.total_sizeof_messages_in_progress.fetch_add(msg_size, Ordering::SeqCst);
+        }
     }
 
     // Decrease limits by size of the message and notify ThrottledFramedReader to try to
     // read again
     pub fn remove_msg(&mut self, msg_size: usize) {
         self.num_messages_in_progress.fetch_sub(1, Ordering::SeqCst);
-        self.total_sizeof_messages_in_progress.fetch_sub(msg_size, Ordering::SeqCst);
+        if msg_size != 0 {
+            self.total_sizeof_messages_in_progress.fetch_sub(msg_size, Ordering::SeqCst);
+        }
 
         // Notify throttled framed reader
         if self.semaphore.available_permits() == 0 {

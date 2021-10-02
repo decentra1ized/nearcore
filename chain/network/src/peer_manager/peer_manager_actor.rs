@@ -40,25 +40,24 @@ use near_store::Store;
 use rand::thread_rng;
 use tokio_util::sync::PollSemaphore;
 
+use crate::common::message_wrapper::{ActixMessageResponse, ActixMessageWrapper};
 use crate::peer::codec::Codec;
 use crate::peer::peer_actor::PeerActor;
 use crate::peer_manager::peer_store::{PeerStore, TrustLevel};
-use crate::stats::metrics;
-use crate::stats::metrics::NetworkMetrics;
-use crate::types::{FullPeerInfo, NetworkClientMessages, NetworkRequests, NetworkResponses};
-use crate::{RoutingTableActor, RoutingTableMessages, RoutingTableMessagesResponse};
-
 #[cfg(all(
     feature = "test_features",
     feature = "protocol_feature_routing_exchange_algorithm"
 ))]
 use crate::routing::edge::SimpleEdge;
+use crate::routing::edge::{Edge, EdgeInfo};
 use crate::routing::edge::{Edge, EdgeInfo, EdgeType};
 use crate::routing::edge_verifier_actor::{EdgeVerifierActor, EdgeVerifierHelper};
 use crate::routing::routing::{
     PeerRequestResult, RoutingTableView, DELETE_PEERS_AFTER_TIME, MAX_NUM_PEERS,
 };
 use crate::routing::routing_table_actor::Prune;
+use crate::stats::metrics;
+use crate::stats::metrics::NetworkMetrics;
 #[cfg(feature = "test_features")]
 use crate::types::SetAdvOptions;
 use crate::types::{
@@ -66,10 +65,11 @@ use crate::types::{
     PeerManagerMessageRequest, PeerManagerMessageResponse, PeerMessage, PeerRequest, PeerResponse,
     PeersRequest, PeersResponse, SendMessage, StopMsg, SyncData, Unregister,
 };
+use crate::types::{FullPeerInfo, NetworkClientMessages, NetworkRequests, NetworkResponses};
 #[cfg(feature = "protocol_feature_routing_exchange_algorithm")]
 use crate::types::{RoutingSyncV2, RoutingVersion2};
-use crate::PeerInfo;
-use near_rate_limiter::{ThrottleController, ThrottledFrameRead};
+use crate::{PeerInfo, RoutingTableActor, RoutingTableMessages, RoutingTableMessagesResponse};
+use near_rate_limiter::{ThrottleController, ThrottleToken, ThrottledFrameRead};
 
 /// How often to request peers from active peers.
 const REQUEST_PEERS_INTERVAL: Duration = Duration::from_millis(60_000);
@@ -104,8 +104,10 @@ const WAIT_FOR_SYNC_DELAY: Duration = Duration::from_millis(1_000);
 const UPDATE_ROUTING_TABLE_INTERVAL: Duration = Duration::from_millis(1_000);
 
 /// Max number of messages we received from peer, and they are in progress, before we start throttling.
-const MAX_MESSAGES_COUNT: usize = 20;
+/// Disabled for now (TODO PUT UNDER FEATURE FLAG)
+const MAX_MESSAGES_COUNT: usize = 0; // 20;
 /// Max total size of all messages that are in progress, before we start throttling.
+/// Disabled for now (TODO PUT UNDER FEATURE FLAG)
 const MAX_MESSAGES_TOTAL_SIZE: usize = 500_000_000;
 
 macro_rules! unwrap_or_error(($obj: expr, $error: expr) => (match $obj {
@@ -2208,6 +2210,26 @@ impl PeerManagerActor {
             ),
             "Fail to update peer store"
         );
+    }
+}
+
+impl Handler<ActixMessageWrapper<PeerManagerMessageRequest, PeerManagerMessageResponse>>
+    for PeerManagerActor
+{
+    type Result = ActixMessageResponse<PeerManagerMessageResponse>;
+
+    fn handle(
+        &mut self,
+        msg: ActixMessageWrapper<PeerManagerMessageRequest, PeerManagerMessageResponse>,
+        ctx: &mut Self::Context,
+    ) -> Self::Result {
+        // Unpack throttle controller
+        let (msg, throttle_token) = msg.take();
+
+        let result = self.handle(msg, ctx);
+
+        // TODO(#5155) Add support for DeepSizeOf to result
+        ActixMessageResponse::new(result, ThrottleToken::new(throttle_token.into_inner(), 0))
     }
 }
 
