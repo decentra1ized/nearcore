@@ -813,6 +813,7 @@ pub struct EdgeList {
     pub sender: QueueSender<Edge>,
     #[cfg(feature = "test_features")]
     pub adv_disable_edge_signature_verification: bool,
+    pub peer_id: PeerId,
 }
 
 impl Message for EdgeList {
