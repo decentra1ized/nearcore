@@ -13,6 +13,7 @@ use chrono::DateTime;
 use chrono::Duration as OldDuration;
 use log::{debug, error, info, trace, warn};
 use near_primitives::time::{Clock, Utc};
+use rand::RngCore;
 
 #[cfg(feature = "delay_detector")]
 use delay_detector::DelayDetector;
@@ -40,6 +41,7 @@ use near_network_primitives::types::NetworkAdversarialMessage;
 use near_network_primitives::types::NetworkSandboxMessage;
 use near_performance_metrics;
 use near_performance_metrics_macros::{perf, perf_with_debug};
+use near_primitives::epoch_manager::RngSeed;
 use near_primitives::hash::CryptoHash;
 use near_primitives::network::{AnnounceAccount, PeerId};
 use near_primitives::types::{BlockHeight, EpochId};
@@ -138,6 +140,7 @@ impl ClientActor {
         validator_signer: Option<Arc<dyn ValidatorSigner>>,
         telemetry_actor: Addr<TelemetryActor>,
         enable_doomslug: bool,
+        rng_seed: RngSeed,
         ctx: &Context<ClientActor>,
         #[cfg(feature = "test_features")] adv: Arc<RwLock<AdversarialControls>>,
     ) -> Result<Self, Error> {
@@ -163,6 +166,7 @@ impl ClientActor {
             network_adapter.clone(),
             validator_signer,
             enable_doomslug,
+            rng_seed,
         )?;
 
         let now = Utc::now();
@@ -1695,6 +1699,12 @@ pub fn start_client(
     #[cfg(feature = "test_features")] adv: Arc<RwLock<AdversarialControls>>,
 ) -> (Addr<ClientActor>, ArbiterHandle) {
     let client_arbiter_handle = Arbiter::current();
+    let mut rng_seed = [4; 32];
+    let thread_rng_seed = rand::thread_rng().next_u64().to_le_bytes().to_vec();
+    for i in 0..8 {
+        rng_seed[i] = thread_rng_seed[i];
+    }
+
     let client_addr = ClientActor::start_in_arbiter(&client_arbiter_handle, move |ctx| {
         ClientActor::new(
             client_config,
@@ -1705,6 +1715,7 @@ pub fn start_client(
             validator_signer,
             telemetry_actor,
             true,
+            rng_seed,
             ctx,
             #[cfg(feature = "test_features")]
             adv,

@@ -55,6 +55,7 @@ use near_network_primitives::types::{
     AccountOrPeerIdOrHash, NetworkViewClientMessages, NetworkViewClientResponses, PeerChainInfoV2,
     PeerInfo,
 };
+use near_primitives::epoch_manager::RngSeed;
 use near_primitives::network::PeerId;
 use near_primitives::runtime::config::RuntimeConfig;
 use near_primitives::time::{Clock, Instant};
@@ -78,6 +79,7 @@ pub fn setup(
     network_adapter: Arc<dyn PeerManagerAdapter>,
     transaction_validity_period: NumBlocks,
     genesis_time: DateTime<Utc>,
+    rng_seed: RngSeed,
     ctx: &Context<ClientActor>,
 ) -> (Block, ClientActor, Addr<ViewClientActor>) {
     let store = create_test_store();
@@ -147,6 +149,7 @@ pub fn setup(
         Some(signer),
         telemetry,
         enable_doomslug,
+        rng_seed,
         ctx,
         #[cfg(feature = "test_features")]
         adv,
@@ -236,6 +239,7 @@ pub fn setup_mock(
     account_id: AccountId,
     skip_sync_wait: bool,
     enable_doomslug: bool,
+    rng_seed: RngSeed,
     peer_manager_mock: Box<
         dyn FnMut(
             &PeerManagerMessageRequest,
@@ -251,6 +255,7 @@ pub fn setup_mock(
         enable_doomslug,
         peer_manager_mock,
         100,
+        rng_seed,
     )
 }
 
@@ -267,6 +272,7 @@ pub fn setup_mock_with_validity_period_and_no_epoch_sync(
         ) -> PeerManagerMessageResponse,
     >,
     transaction_validity_period: NumBlocks,
+    rng_seed: RngSeed,
 ) -> (Addr<ClientActor>, Addr<ViewClientActor>) {
     let network_adapter = Arc::new(NetworkRecipient::new());
     let mut vca: Option<Addr<ViewClientActor>> = None;
@@ -286,6 +292,7 @@ pub fn setup_mock_with_validity_period_and_no_epoch_sync(
             network_adapter.clone(),
             transaction_validity_period,
             Clock::utc(),
+            rng_seed,
             ctx,
         );
         vca = Some(view_client_addr);
@@ -988,6 +995,10 @@ pub fn setup_mock_all_validators(
             .start();
             let network_adapter = NetworkRecipient::new();
             network_adapter.set_recipient(pm.recipient());
+            let rng_seed: RngSeed = [
+                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+                24, 25, 26, 27, 28, 29, 30, 31, 32,
+            ];
             let (block, client, view_client_addr) = setup(
                 validators_clone1.clone(),
                 validator_groups,
@@ -1003,6 +1014,7 @@ pub fn setup_mock_all_validators(
                 Arc::new(network_adapter),
                 10000,
                 genesis_time,
+                rng_seed,
                 &ctx,
             );
             *view_client_addr1.write().unwrap() = Some(view_client_addr);
@@ -1028,6 +1040,7 @@ pub fn setup_no_network(
     account_id: AccountId,
     skip_sync_wait: bool,
     enable_doomslug: bool,
+    rng_seed: RngSeed,
 ) -> (Addr<ClientActor>, Addr<ViewClientActor>) {
     setup_no_network_with_validity_period_and_no_epoch_sync(
         validators,
@@ -1035,6 +1048,7 @@ pub fn setup_no_network(
         skip_sync_wait,
         100,
         enable_doomslug,
+        rng_seed,
     )
 }
 
@@ -1044,6 +1058,7 @@ pub fn setup_no_network_with_validity_period_and_no_epoch_sync(
     skip_sync_wait: bool,
     transaction_validity_period: NumBlocks,
     enable_doomslug: bool,
+    rng_seed: RngSeed,
 ) -> (Addr<ClientActor>, Addr<ViewClientActor>) {
     setup_mock_with_validity_period_and_no_epoch_sync(
         validators,
@@ -1054,6 +1069,7 @@ pub fn setup_no_network_with_validity_period_and_no_epoch_sync(
             PeerManagerMessageResponse::NetworkResponses(NetworkResponses::NoResponse)
         }),
         transaction_validity_period,
+        rng_seed,
     )
 }
 
@@ -1064,6 +1080,7 @@ pub fn setup_client_with_runtime(
     network_adapter: Arc<dyn PeerManagerAdapter>,
     chain_genesis: ChainGenesis,
     runtime_adapter: Arc<dyn RuntimeAdapter>,
+    rng_seed: RngSeed,
 ) -> Client {
     let validator_signer = account_id.map(|x| {
         Arc::new(InMemoryValidatorSigner::from_seed(x.clone(), KeyType::ED25519, x.as_ref()))
@@ -1078,6 +1095,7 @@ pub fn setup_client_with_runtime(
         network_adapter,
         validator_signer,
         enable_doomslug,
+        rng_seed,
     )
     .unwrap();
     client.sync_status = SyncStatus::NoSync;
@@ -1093,6 +1111,7 @@ pub fn setup_client(
     enable_doomslug: bool,
     network_adapter: Arc<dyn PeerManagerAdapter>,
     chain_genesis: ChainGenesis,
+    rng_seed: RngSeed,
 ) -> Client {
     let num_validator_seats = validators.iter().map(|x| x.len()).sum::<usize>() as NumSeats;
     let runtime_adapter = Arc::new(KeyValueRuntime::new_with_validators(
@@ -1109,6 +1128,7 @@ pub fn setup_client(
         network_adapter,
         chain_genesis,
         runtime_adapter,
+        rng_seed,
     )
 }
 
@@ -1193,6 +1213,13 @@ impl TestEnvBuilder {
         self
     }
 
+    pub fn seed_per_validator(self, _account_id: AccountId) -> RngSeed {
+        [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+            25, 26, 27, 28, 29, 30, 31, 32,
+        ]
+    }
+
     /// Constructs new `TestEnv` structure.
     ///
     /// If no clients were configured (either through count or vector) one
@@ -1217,15 +1244,20 @@ impl TestEnvBuilder {
                 .into_iter()
                 .zip(network_adapters.iter())
                 .map(|(account_id, network_adapter)| {
+                    let rng_seed = [
+                        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+                        22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+                    ];
                     setup_client(
                         create_test_store(),
                         vec![validators.clone()],
                         1,
                         1,
-                        Some(account_id),
+                        Some(account_id.clone()),
                         false,
                         network_adapter.clone(),
                         chain_genesis.clone(),
+                        rng_seed,
                     )
                 })
                 .collect(),
@@ -1238,11 +1270,15 @@ impl TestEnvBuilder {
                     .map(|((account_id, network_adapter), runtime_adapter)| {
                         setup_client_with_runtime(
                             u64::try_from(num_validators).unwrap(),
-                            Some(account_id),
+                            Some(account_id.clone()),
                             false,
                             network_adapter.clone(),
                             chain_genesis.clone(),
                             runtime_adapter,
+                            [
+                                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                                20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+                            ],
                         )
                     })
                     .collect()
@@ -1416,6 +1452,7 @@ impl TestEnv {
             false,
             self.network_adapters[idx].clone(),
             self.chain_genesis.clone(),
+            self.clients[idx].shards_mgr.rng_seed,
         )
     }
 

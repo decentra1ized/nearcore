@@ -18,6 +18,7 @@ use smart_default::SmartDefault;
 use tracing::info;
 
 use crate::genesis_validate::validate_genesis;
+use near_primitives::epoch_manager::RngSeed;
 use near_primitives::epoch_manager::{AllEpochConfig, EpochConfig, ShardConfig};
 use near_primitives::shard_layout::ShardLayout;
 use near_primitives::types::validator_stake::ValidatorStake;
@@ -81,6 +82,14 @@ fn default_simple_nightshade_shard_layout() -> Option<ShardLayout> {
         Some(vec![vec![0, 1, 2, 3]]),
         1,
     ));
+}
+
+#[cfg(feature = "protocol_feature_chunk_only_producers")]
+fn default_rng_seed() -> RngSeed {
+    [
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+        26, 27, 28, 29, 30, 31, 32,
+    ]
 }
 
 #[derive(Debug, Clone, SmartDefault, Serialize, Deserialize)]
@@ -181,6 +190,10 @@ pub struct GenesisConfig {
     #[serde(default = "default_minimum_stake_ratio")]
     #[default(Rational::new(160, 1_000_000))]
     pub minimum_stake_ratio: Rational,
+    #[cfg(feature = "protocol_feature_chunk_only_producers")]
+    #[serde(default = "default_rng_seed")]
+    #[default([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32])]
+    pub rng_seed: [u8; 32],
 }
 
 impl From<&GenesisConfig> for EpochConfig {
@@ -207,6 +220,7 @@ impl From<&GenesisConfig> for EpochConfig {
                 minimum_validators_per_shard: config.minimum_validators_per_shard,
                 minimum_stake_ratio: config.minimum_stake_ratio,
             },
+            rng_seed: config.rng_seed,
         }
     }
 }

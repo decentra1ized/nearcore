@@ -204,6 +204,7 @@ impl Default for ChunkForwardingTestFixture {
             Some(mock_chunk_producer.clone()),
             mock_runtime.clone(),
             mock_network.clone(),
+            [4; 32],
         );
         let receipts = Vec::new();
         let shard_layout = mock_runtime.get_shard_layout(&EpochId::default()).unwrap();

@@ -51,6 +51,7 @@ use near_network_primitives::types::{
     PartialEncodedChunkForwardMsg, PartialEncodedChunkResponseMsg,
 };
 use near_primitives::block_header::ApprovalType;
+use near_primitives::epoch_manager::RngSeed;
 use near_primitives::version::{ProtocolVersion, PROTOCOL_VERSION};
 
 const NUM_REBROADCAST_BLOCKS: usize = 30;
@@ -114,6 +115,7 @@ impl Client {
         network_adapter: Arc<dyn PeerManagerAdapter>,
         validator_signer: Option<Arc<dyn ValidatorSigner>>,
         enable_doomslug: bool,
+        rng_seed: RngSeed,
     ) -> Result<Self, Error> {
         let doomslug_threshold_mode = if enable_doomslug {
             DoomslugThresholdMode::TwoThirds
@@ -125,6 +127,7 @@ impl Client {
             validator_signer.as_ref().map(|x| x.validator_id().clone()),
             runtime_adapter.clone(),
             network_adapter.clone(),
+            rng_seed,
         );
         let sync_status = SyncStatus::AwaitingPeers;
         let genesis_block = chain.genesis_block();

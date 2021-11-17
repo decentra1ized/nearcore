@@ -29,8 +29,13 @@ use std::time::Duration;
 fn query_client() {
     init_test_logger();
     run_actix(async {
-        let (_, view_client) =
-            setup_no_network(vec!["test".parse().unwrap()], "other".parse().unwrap(), true, true);
+        let (_, view_client) = setup_no_network(
+            vec!["test".parse().unwrap()],
+            "other".parse().unwrap(),
+            true,
+            true,
+            [3; 32],
+        );
         actix::spawn(
             view_client
                 .send(Query::new(
@@ -55,8 +60,13 @@ fn query_client() {
 fn query_status_not_crash() {
     init_test_logger();
     run_actix(async {
-        let (client, view_client) =
-            setup_no_network(vec!["test".parse().unwrap()], "other".parse().unwrap(), true, false);
+        let (client, view_client) = setup_no_network(
+            vec!["test".parse().unwrap()],
+            "other".parse().unwrap(),
+            true,
+            false,
+            [3; 32],
+        );
         let signer =
             InMemoryValidatorSigner::from_seed("test".parse().unwrap(), KeyType::ED25519, "test");
         actix::spawn(view_client.send(GetBlockWithMerkleTree::latest()).then(move |res| {
@@ -112,8 +122,13 @@ fn query_status_not_crash() {
 fn test_execution_outcome_for_chunk() {
     init_test_logger();
     run_actix(async {
-        let (client, view_client) =
-            setup_no_network(vec!["test".parse().unwrap()], "test".parse().unwrap(), true, false);
+        let (client, view_client) = setup_no_network(
+            vec!["test".parse().unwrap()],
+            "test".parse().unwrap(),
+            true,
+            false,
+            [3; 32],
+        );
         let signer = InMemorySigner::from_seed("test".parse().unwrap(), KeyType::ED25519, "test");
 
         actix::spawn(async move {

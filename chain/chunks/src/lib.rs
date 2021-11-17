@@ -44,6 +44,7 @@ use near_network_primitives::types::{
     AccountIdOrPeerTrackingShard, PartialEncodedChunkForwardMsg, PartialEncodedChunkRequestMsg,
     PartialEncodedChunkResponseMsg,
 };
+use near_primitives::epoch_manager::RngSeed;
 use near_primitives::shard_layout::{account_id_to_shard_id, ShardLayout};
 use rand::Rng;
 
@@ -397,6 +398,7 @@ pub struct ShardsManager {
     chunk_forwards_cache: SizedCache<ChunkHash, HashMap<u64, PartialEncodedChunkPart>>,
 
     seals_mgr: SealsManager,
+    pub rng_seed: RngSeed,
 }
 
 impl ShardsManager {
@@ -404,6 +406,7 @@ impl ShardsManager {
         me: Option<AccountId>,
         runtime_adapter: Arc<dyn RuntimeAdapter>,
         network_adapter: Arc<dyn PeerManagerAdapter>,
+        rng_seed: RngSeed,
     ) -> Self {
         Self {
             me: me.clone(),
@@ -420,6 +423,7 @@ impl ShardsManager {
             stored_partial_encoded_chunks: HashMap::new(),
             chunk_forwards_cache: SizedCache::with_size(CHUNK_FORWARD_CACHE_SIZE),
             seals_mgr: SealsManager::new(me, runtime_adapter),
+            rng_seed,
         }
     }
 
@@ -775,7 +779,10 @@ impl ShardsManager {
 
     /// Returns true if transaction is not in the pool before call
     pub fn insert_transaction(&mut self, shard_id: ShardId, tx: SignedTransaction) -> bool {
-        self.tx_pools.entry(shard_id).or_insert_with(TransactionPool::new).insert_transaction(tx)
+        self.tx_pools
+            .entry(shard_id)
+            .or_insert_with(|| TransactionPool::new(self.rng_seed))
+            .insert_transaction(tx)
     }
 
     pub fn remove_transactions(
@@ -795,7 +802,7 @@ impl ShardsManager {
     ) {
         self.tx_pools
             .entry(shard_id)
-            .or_insert_with(TransactionPool::new)
+            .or_insert_with(|| TransactionPool::new(self.rng_seed))
             .reintroduce_transactions(transactions.clone());
     }
 
@@ -1757,6 +1764,7 @@ mod test {
             Some("test".parse().unwrap()),
             runtime_adapter,
             network_adapter.clone(),
+            [3; 32],
         );
         let added = Clock::instant();
         shards_manager.requested_partial_encoded_chunks.insert(
@@ -1812,6 +1820,7 @@ mod test {
             Some("test".parse().unwrap()),
             runtime_adapter.clone(),
             network_adapter.clone(),
+            [3; 32],
         );
         let signer =
             InMemoryValidatorSigner::from_seed("test".parse().unwrap(), KeyType::ED25519, "test");
@@ -1978,6 +1987,7 @@ mod test {
             Some(fixture.mock_chunk_part_owner.clone()),
             fixture.mock_runtime.clone(),
             fixture.mock_network.clone(),
+            [3; 32],
         );
         let partial_encoded_chunk = fixture.make_partial_encoded_chunk(&fixture.mock_part_ords);
         let result = shards_manager
@@ -2035,6 +2045,7 @@ mod test {
             Some(fixture.mock_shard_tracker.clone()),
             fixture.mock_runtime.clone(),
             fixture.mock_network.clone(),
+            [3; 32],
         );
         let (most_parts, other_parts) = {
             let mut most_parts = fixture.mock_chunk_parts.clone();

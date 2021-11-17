@@ -216,11 +216,13 @@ fn produce_two_blocks() {
     init_test_logger();
     run_actix(async {
         let count = Arc::new(AtomicUsize::new(0));
+        let rng_seed = [3; 32];
         setup_mock(
             vec!["test".parse().unwrap()],
             "test".parse().unwrap(),
             true,
             false,
+            rng_seed,
             Box::new(move |msg, _ctx, _| {
                 if let NetworkRequests::Block { .. } = msg.as_network_requests_ref() {
                     count.fetch_add(1, Ordering::Relaxed);
@@ -248,6 +250,7 @@ fn produce_blocks_with_tx() {
             "test".parse().unwrap(),
             true,
             false,
+            [3; 32],
             Box::new(move |msg, _ctx, _| {
                 if let NetworkRequests::PartialEncodedChunkMessage {
                     account_id: _,
@@ -316,6 +319,7 @@ fn receive_network_block() {
             "test2".parse().unwrap(),
             true,
             false,
+            [3; 32],
             Box::new(move |msg, _ctx, _| {
                 if let NetworkRequests::Approval { .. } = msg.as_network_requests_ref() {
                     let mut first_header_announce = first_header_announce.write().unwrap();
@@ -383,6 +387,7 @@ fn produce_block_with_approvals() {
             "test1".parse().unwrap(),
             true,
             false,
+            [3; 32],
             Box::new(move |msg, _ctx, _| {
                 if let NetworkRequests::Block { block } = msg.as_network_requests_ref() {
                     // Below we send approvals from all the block producers except for test1 and test2
@@ -568,11 +573,13 @@ fn invalid_blocks_common(is_requested: bool) {
     init_test_logger();
     run_actix(async move {
         let mut ban_counter = 0;
+        let rng_seed = [3; 32];
         let (client, view_client) = setup_mock(
             vec!["test".parse().unwrap()],
             "other".parse().unwrap(),
             true,
             false,
+            rng_seed,
             Box::new(move |msg, _ctx, _client_actor| {
                 match msg.as_network_requests_ref() {
                     NetworkRequests::Block { block } => {
@@ -897,6 +904,7 @@ fn skip_block_production() {
             "test2".parse().unwrap(),
             true,
             false,
+            [3; 32],
             Box::new(move |msg, _ctx, _client_actor| {
                 match msg.as_network_requests_ref() {
                     NetworkRequests::Block { block } => {
@@ -925,6 +933,7 @@ fn client_sync_headers() {
             "other".parse().unwrap(),
             false,
             false,
+            [3; 32],
             Box::new(move |msg, _ctx, _client_actor| match msg.as_network_requests_ref() {
                 NetworkRequests::BlockHeadersRequest { hashes, peer_id } => {
                     assert_eq!(*peer_id, peer_info1.id);
@@ -1001,6 +1010,7 @@ fn test_process_invalid_tx() {
         false,
         network_adapter,
         chain_genesis,
+        [3; 32],
     );
     let signer = InMemorySigner::from_seed("test1".parse().unwrap(), KeyType::ED25519, "test1");
     let tx = SignedTransaction::new(
@@ -1052,6 +1062,7 @@ fn test_time_attack() {
         false,
         network_adapter,
         chain_genesis,
+        [3; 32],
     );
     let signer =
         InMemoryValidatorSigner::from_seed("test1".parse().unwrap(), KeyType::ED25519, "test1");
@@ -1084,6 +1095,7 @@ fn test_invalid_approvals() {
         false,
         network_adapter,
         chain_genesis,
+        [3; 32],
     );
     let signer =
         InMemoryValidatorSigner::from_seed("test1".parse().unwrap(), KeyType::ED25519, "test1");
@@ -1138,6 +1150,7 @@ fn test_invalid_gas_price() {
         false,
         network_adapter,
         chain_genesis,
+        [3; 32],
     );
     let signer =
         InMemoryValidatorSigner::from_seed("test1".parse().unwrap(), KeyType::ED25519, "test1");
@@ -1323,6 +1336,7 @@ fn test_bad_chunk_mask() {
                 false,
                 Arc::new(MockPeerManagerAdapter::default()),
                 chain_genesis.clone(),
+                [3; 32],
             )
         })
         .collect();
@@ -1918,6 +1932,7 @@ fn test_incorrect_validator_key_produce_block() {
         Arc::new(MockPeerManagerAdapter::default()),
         Some(signer),
         false,
+        [3; 32],
     )
     .unwrap();
     let res = client.produce_block(1);

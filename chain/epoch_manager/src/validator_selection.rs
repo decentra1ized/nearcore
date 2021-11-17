@@ -707,6 +707,7 @@ mod tests {
             protocol_upgrade_num_epochs: 0,
             shard_layout: ShardLayout::default(),
             validator_selection_config,
+            rng_seed: [0; 32],
         }
     }
 
