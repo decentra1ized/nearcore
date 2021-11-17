@@ -163,10 +163,9 @@ pub(crate) fn is_forward_tx(bytes: &[u8]) -> Option<bool> {
 
 #[cfg(test)]
 mod test {
-    use crate::PeerInfo;
     use near_crypto::{KeyType, PublicKey, SecretKey};
     use near_network_primitives::types::{
-        PeerChainInfo, PeerChainInfoV2, PeerIdOrHash, RoutedMessage, RoutedMessageBody,
+        PeerChainInfo, PeerChainInfoV2, PeerIdOrHash, PeerInfo, RoutedMessage, RoutedMessageBody,
     };
     use near_primitives::block::{Approval, ApprovalInner};
     use near_primitives::hash::{self, CryptoHash};

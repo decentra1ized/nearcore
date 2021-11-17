@@ -22,7 +22,7 @@ use near_network_primitives::types::NetworkSandboxMessage;
 use near_network_primitives::types::{
     AccountIdOrPeerTrackingShard, AccountOrPeerIdOrHash, Ban, InboundTcpConnect, KnownProducer,
     OutboundTcpConnect, PartialEncodedChunkForwardMsg, PartialEncodedChunkRequestMsg,
-    PartialEncodedChunkResponseMsg, PeerChainInfo, PeerChainInfoV2, PeerType, Ping, Pong,
+    PartialEncodedChunkResponseMsg, PeerChainInfo, PeerChainInfoV2, PeerInfo, PeerType, Ping, Pong,
     ReasonForBan, RoutedMessage, RoutedMessageBody, RoutedMessageFrom, StateResponseInfo,
 };
 
@@ -47,7 +47,6 @@ use crate::routing::ibf::IbfBox;
 #[cfg(feature = "protocol_feature_routing_exchange_algorithm")]
 use crate::routing::ibf_peer_set::ValidIBFLevel;
 use crate::routing::routing::{GetRoutingTableResult, PeerRequestResult, RoutingTableInfo};
-use crate::PeerInfo;
 
 const ERROR_UNEXPECTED_LENGTH_OF_INPUT: &str = "Unexpected length of input";
 

@@ -19,9 +19,9 @@ use tracing::debug;
 use near_crypto::{KeyType, SecretKey};
 #[cfg(feature = "test_features")]
 use near_network_primitives::types::NetworkConfig;
-use near_network_primitives::types::ReasonForBan;
 #[cfg(feature = "test_features")]
 use near_network_primitives::types::{NetworkViewClientMessages, NetworkViewClientResponses};
+use near_network_primitives::types::{PeerInfo, ReasonForBan};
 #[cfg(feature = "test_features")]
 use near_primitives::block::GenesisId;
 #[cfg(feature = "test_features")]
@@ -45,7 +45,6 @@ use crate::types::{
     NetworkInfo, NetworkResponses, PeerManagerAdapter, PeerManagerMessageRequest,
     PeerManagerMessageResponse,
 };
-use crate::PeerInfo;
 use crate::PeerManagerActor;
 #[cfg(feature = "test_features")]
 use crate::RoutingTableActor;

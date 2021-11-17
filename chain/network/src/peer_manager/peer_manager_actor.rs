@@ -24,9 +24,9 @@ use delay_detector::DelayDetector;
 use near_network_primitives::types::{
     AccountOrPeerIdOrHash, Ban, BlockedPorts, InboundTcpConnect, KnownPeerState, KnownPeerStatus,
     KnownProducer, NetworkConfig, NetworkViewClientMessages, NetworkViewClientResponses,
-    OutboundTcpConnect, PeerIdOrHash, PeerManagerRequest, PeerType, Ping, Pong, QueryPeerStats,
-    RawRoutedMessage, ReasonForBan, RoutedMessage, RoutedMessageBody, RoutedMessageFrom,
-    StateResponseInfo,
+    OutboundTcpConnect, PeerIdOrHash, PeerInfo, PeerManagerRequest, PeerType, Ping, Pong,
+    QueryPeerStats, RawRoutedMessage, ReasonForBan, RoutedMessage, RoutedMessageBody,
+    RoutedMessageFrom, StateResponseInfo,
 };
 use near_performance_metrics::framed_write::FramedWrite;
 use near_performance_metrics_macros::perf;
@@ -43,11 +43,6 @@ use tokio_util::sync::PollSemaphore;
 use crate::peer::codec::Codec;
 use crate::peer::peer_actor::PeerActor;
 use crate::peer_manager::peer_store::{PeerStore, TrustLevel};
-use crate::stats::metrics;
-use crate::stats::metrics::NetworkMetrics;
-use crate::types::{FullPeerInfo, NetworkClientMessages, NetworkRequests, NetworkResponses};
-use crate::{RoutingTableActor, RoutingTableMessages, RoutingTableMessagesResponse};
-
 #[cfg(all(
     feature = "test_features",
     feature = "protocol_feature_routing_exchange_algorithm"
@@ -59,16 +54,19 @@ use crate::routing::routing::{
     PeerRequestResult, RoutingTableView, DELETE_PEERS_AFTER_TIME, MAX_NUM_PEERS,
 };
 use crate::routing::routing_table_actor::Prune;
+use crate::stats::metrics;
+use crate::stats::metrics::NetworkMetrics;
 #[cfg(feature = "test_features")]
 use crate::types::SetAdvOptions;
 use crate::types::{
-    Consolidate, ConsolidateResponse, EdgeList, GetPeerId, GetPeerIdResult, NetworkInfo,
+    Consolidate, ConsolidateResponse, EdgeList, FullPeerInfo, GetPeerId, GetPeerIdResult,
+    NetworkClientMessages, NetworkInfo, NetworkRequests, NetworkResponses,
     PeerManagerMessageRequest, PeerManagerMessageResponse, PeerMessage, PeerRequest, PeerResponse,
     PeersRequest, PeersResponse, SendMessage, StopMsg, SyncData, Unregister,
 };
 #[cfg(feature = "protocol_feature_routing_exchange_algorithm")]
 use crate::types::{RoutingSyncV2, RoutingVersion2};
-use crate::PeerInfo;
+use crate::{RoutingTableActor, RoutingTableMessages, RoutingTableMessagesResponse};
 use near_rate_limiter::{ThrottleController, ThrottledFrameRead};
 
 /// How often to request peers from active peers.
@@ -273,7 +271,7 @@ impl PeerManagerActor {
             .send(RoutingTableMessages::RoutingTableUpdate { prune, prune_edges_not_reachable_for })
             .into_actor(self)
             .map(|response, act, _| match response {
-                Ok(RoutingTableMessagesResponse::RoutingTableUpdateResponse {
+                Ok(crate::RoutingTableMessagesResponse::RoutingTableUpdateResponse {
                     edges_to_remove,
                     peer_forwarding,
                 }) => {
