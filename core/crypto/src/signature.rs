@@ -6,18 +6,14 @@ use std::io::{Error, ErrorKind, Write};
 use std::str::FromStr;
 
 use borsh::{BorshDeserialize, BorshSerialize};
-// We need to import ed25519::signature::Signature, because we use traits from those structs.
-// However, `Signature` symbol is already used to define a different data structure.
-use ed25519_dalek::ed25519::signature::{Signature as _Signature, Signer, Verifier};
-use lazy_static::lazy_static;
+use ed25519_dalek::ed25519::signature::{Signature as _, Signer, Verifier};
+use once_cell::sync::Lazy;
 use primitive_types::U256;
 use rand_core::OsRng;
 use secp256k1::Message;
 use serde::{Deserialize, Serialize};
 
-lazy_static! {
-    pub static ref SECP256K1: secp256k1::Secp256k1 = secp256k1::Secp256k1::new();
-}
+pub static SECP256K1: Lazy<secp256k1::Secp256k1> = Lazy::new(|| secp256k1::Secp256k1::new());
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum KeyType {
