@@ -398,7 +398,7 @@ pub struct ShardsManager {
     chunk_forwards_cache: SizedCache<ChunkHash, HashMap<u64, PartialEncodedChunkPart>>,
 
     seals_mgr: SealsManager,
-    pub rng_seed: RngSeed,
+    rng_seed: RngSeed,
 }
 
 impl ShardsManager {
@@ -779,9 +779,10 @@ impl ShardsManager {
 
     /// Returns true if transaction is not in the pool before call
     pub fn insert_transaction(&mut self, shard_id: ShardId, tx: SignedTransaction) -> bool {
+        let seed = self.random_seed(shard_id);
         self.tx_pools
             .entry(shard_id)
-            .or_insert_with(|| TransactionPool::new(self.rng_seed))
+            .or_insert_with(|| TransactionPool::new(seed))
             .insert_transaction(tx)
     }
 
@@ -800,9 +801,10 @@ impl ShardsManager {
         shard_id: ShardId,
         transactions: &Vec<SignedTransaction>,
     ) {
+        let seed = self.random_seed(shard_id);
         self.tx_pools
             .entry(shard_id)
-            .or_insert_with(|| TransactionPool::new(self.rng_seed))
+            .or_insert_with(|| TransactionPool::new(seed))
             .reintroduce_transactions(transactions.clone());
     }
 
@@ -1729,6 +1731,12 @@ impl ShardsManager {
         self.decode_and_persist_encoded_chunk(encoded_chunk, chain_store, merkle_paths)?;
 
         Ok(())
+    }
+    pub fn random_seed(&self, shard_id: ShardId) -> RngSeed {
+        let mut res = self.rng_seed.clone();
+        res[17] = shard_id as u8;
+        res[23] = (shard_id / 256) as u8;
+        res
     }
 }
 

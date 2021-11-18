@@ -1452,7 +1452,7 @@ impl TestEnv {
             false,
             self.network_adapters[idx].clone(),
             self.chain_genesis.clone(),
-            self.clients[idx].shards_mgr.rng_seed,
+            self.clients[idx].shards_mgr.random_seed(0),
         )
     }
 
