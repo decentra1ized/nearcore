@@ -52,7 +52,6 @@ pub struct EpochConfig {
     pub shard_layout: ShardLayout,
     #[cfg(feature = "protocol_feature_chunk_only_producers")]
     pub validator_selection_config: ValidatorSelectionConfig,
-    pub rng_seed: RngSeed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

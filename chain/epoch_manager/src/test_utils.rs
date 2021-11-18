@@ -20,7 +20,6 @@ use near_store::test_utils::create_test_store;
 
 use crate::proposals::find_threshold;
 use crate::RewardCalculator;
-use crate::RngSeed;
 use crate::{BlockInfo, EpochManager};
 
 use near_primitives::shard_layout::ShardLayout;
@@ -52,7 +51,6 @@ pub fn epoch_info(
     validator_kickout: Vec<(AccountId, ValidatorKickoutReason)>,
     validator_reward: HashMap<AccountId, Balance>,
     minted_amount: Balance,
-    rnd_seed: RngSeed,
 ) -> EpochInfo {
     let num_seats = block_producers_settlement.len() as u64;
     epoch_info_with_num_seats(
@@ -67,7 +65,6 @@ pub fn epoch_info(
         validator_reward,
         minted_amount,
         num_seats,
-        rnd_seed,
     )
 }
 
@@ -83,7 +80,6 @@ pub fn epoch_info_with_num_seats(
     validator_reward: HashMap<AccountId, Balance>,
     minted_amount: Balance,
     num_seats: NumSeats,
-    rng_seed: RngSeed,
 ) -> EpochInfo {
     let seat_price =
         find_threshold(&accounts.iter().map(|(_, s)| *s).collect::<Vec<_>>(), num_seats).unwrap();
@@ -124,7 +120,7 @@ pub fn epoch_info_with_num_seats(
         seat_price,
         PROTOCOL_VERSION,
         #[cfg(feature = "protocol_feature_chunk_only_producers")]
-        rng_seed,
+        [0; 32],
     )
 }
 
@@ -137,7 +133,6 @@ pub fn epoch_config(
     chunk_producer_kickout_threshold: u8,
     fishermen_threshold: Balance,
     simple_nightshade_shard_config: Option<ShardConfig>,
-    rng_seed: [u8; 32],
 ) -> AllEpochConfig {
     let epoch_config = EpochConfig {
         epoch_length,
@@ -160,7 +155,6 @@ pub fn epoch_config(
         #[cfg(feature = "protocol_feature_chunk_only_producers")]
         validator_selection_config: Default::default(),
         shard_layout: ShardLayout::v0(num_shards, 0),
-        rng_seed,
     };
     AllEpochConfig::new(epoch_config, simple_nightshade_shard_config)
 }
@@ -205,7 +199,6 @@ pub fn setup_epoch_manager_with_simple_nightshade_config(
     fishermen_threshold: Balance,
     reward_calculator: RewardCalculator,
     simple_nightshade_config: Option<ShardConfig>,
-    rng_seed: [u8; 32],
 ) -> EpochManager {
     let store = create_test_store();
     let config = epoch_config(
@@ -217,7 +210,6 @@ pub fn setup_epoch_manager_with_simple_nightshade_config(
         chunk_producer_kickout_threshold,
         fishermen_threshold,
         simple_nightshade_config,
-        rng_seed,
     );
     EpochManager::new(
         store,
@@ -242,7 +234,6 @@ pub fn setup_epoch_manager(
     chunk_producer_kickout_threshold: u8,
     fishermen_threshold: Balance,
     reward_calculator: RewardCalculator,
-    rng_seed: [u8; 32],
 ) -> EpochManager {
     setup_epoch_manager_with_simple_nightshade_config(
         validators,
@@ -255,7 +246,6 @@ pub fn setup_epoch_manager(
         fishermen_threshold,
         reward_calculator,
         None,
-        rng_seed,
     )
 }
 
@@ -267,7 +257,6 @@ pub fn setup_default_epoch_manager(
     num_hidden_validator_seats: NumSeats,
     block_producer_kickout_threshold: u8,
     chunk_producer_kickout_threshold: u8,
-    rng_seed: [u8; 32],
 ) -> EpochManager {
     setup_epoch_manager(
         validators,
@@ -279,7 +268,6 @@ pub fn setup_default_epoch_manager(
         chunk_producer_kickout_threshold,
         1,
         default_reward_calculator(),
-        rng_seed,
     )
 }
 

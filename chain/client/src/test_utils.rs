@@ -79,7 +79,6 @@ pub fn setup(
     network_adapter: Arc<dyn PeerManagerAdapter>,
     transaction_validity_period: NumBlocks,
     genesis_time: DateTime<Utc>,
-    rng_seed: RngSeed,
     ctx: &Context<ClientActor>,
 ) -> (Block, ClientActor, Addr<ViewClientActor>) {
     let store = create_test_store();
@@ -149,7 +148,7 @@ pub fn setup(
         Some(signer),
         telemetry,
         enable_doomslug,
-        rng_seed,
+        [4; 32],
         ctx,
         #[cfg(feature = "test_features")]
         adv,
@@ -239,7 +238,6 @@ pub fn setup_mock(
     account_id: AccountId,
     skip_sync_wait: bool,
     enable_doomslug: bool,
-    rng_seed: RngSeed,
     peer_manager_mock: Box<
         dyn FnMut(
             &PeerManagerMessageRequest,
@@ -255,7 +253,6 @@ pub fn setup_mock(
         enable_doomslug,
         peer_manager_mock,
         100,
-        rng_seed,
     )
 }
 
@@ -272,7 +269,6 @@ pub fn setup_mock_with_validity_period_and_no_epoch_sync(
         ) -> PeerManagerMessageResponse,
     >,
     transaction_validity_period: NumBlocks,
-    rng_seed: RngSeed,
 ) -> (Addr<ClientActor>, Addr<ViewClientActor>) {
     let network_adapter = Arc::new(NetworkRecipient::new());
     let mut vca: Option<Addr<ViewClientActor>> = None;
@@ -292,7 +288,6 @@ pub fn setup_mock_with_validity_period_and_no_epoch_sync(
             network_adapter.clone(),
             transaction_validity_period,
             Clock::utc(),
-            rng_seed,
             ctx,
         );
         vca = Some(view_client_addr);
@@ -995,10 +990,6 @@ pub fn setup_mock_all_validators(
             .start();
             let network_adapter = NetworkRecipient::new();
             network_adapter.set_recipient(pm.recipient());
-            let rng_seed: RngSeed = [
-                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-                24, 25, 26, 27, 28, 29, 30, 31, 32,
-            ];
             let (block, client, view_client_addr) = setup(
                 validators_clone1.clone(),
                 validator_groups,
@@ -1014,7 +1005,6 @@ pub fn setup_mock_all_validators(
                 Arc::new(network_adapter),
                 10000,
                 genesis_time,
-                rng_seed,
                 &ctx,
             );
             *view_client_addr1.write().unwrap() = Some(view_client_addr);
@@ -1040,7 +1030,6 @@ pub fn setup_no_network(
     account_id: AccountId,
     skip_sync_wait: bool,
     enable_doomslug: bool,
-    rng_seed: RngSeed,
 ) -> (Addr<ClientActor>, Addr<ViewClientActor>) {
     setup_no_network_with_validity_period_and_no_epoch_sync(
         validators,
@@ -1048,7 +1037,6 @@ pub fn setup_no_network(
         skip_sync_wait,
         100,
         enable_doomslug,
-        rng_seed,
     )
 }
 
@@ -1058,7 +1046,6 @@ pub fn setup_no_network_with_validity_period_and_no_epoch_sync(
     skip_sync_wait: bool,
     transaction_validity_period: NumBlocks,
     enable_doomslug: bool,
-    rng_seed: RngSeed,
 ) -> (Addr<ClientActor>, Addr<ViewClientActor>) {
     setup_mock_with_validity_period_and_no_epoch_sync(
         validators,
@@ -1069,7 +1056,6 @@ pub fn setup_no_network_with_validity_period_and_no_epoch_sync(
             PeerManagerMessageResponse::NetworkResponses(NetworkResponses::NoResponse)
         }),
         transaction_validity_period,
-        rng_seed,
     )
 }
 

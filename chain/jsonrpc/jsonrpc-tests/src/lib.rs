@@ -41,7 +41,6 @@ pub fn start_all_with_validity_period_and_no_epoch_sync(
         true,
         transaction_validity_period,
         enable_doomslug,
-        [3; 32],
     );
 
     let addr = format!("127.0.0.1:{}", open_port());

@@ -184,7 +184,6 @@ mod tests {
             shard_layout: ShardLayout::v0(num_shards, 0),
             #[cfg(feature = "protocol_feature_chunk_only_producers")]
             validator_selection_config: Default::default(),
-            rng_seed: [0; 32],
         };
         let reward_calculator = RewardCalculator {
             max_inflation_rate: Rational::from_integer(0),

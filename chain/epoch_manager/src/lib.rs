@@ -1537,8 +1537,7 @@ mod tests {
     fn test_stake_validator() {
         let amount_staked = 1_000_000;
         let validators = vec![("test1".parse().unwrap(), amount_staked)];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators.clone(), 1, 1, 2, 2, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators.clone(), 1, 1, 2, 2, 90, 60);
 
         let h = hash_range(4);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
@@ -1555,7 +1554,6 @@ mod tests {
             reward(vec![("near".parse().unwrap(), 0)]),
             0,
             4,
-            [3; 32],
         );
         let compare_epoch_infos = |a: &EpochInfo, b: &EpochInfo| -> bool {
             a.validators_iter().eq(b.validators_iter())
@@ -1604,7 +1602,6 @@ mod tests {
             reward(vec![("test1".parse().unwrap(), 0), ("near".parse().unwrap(), 0)]),
             0,
             4,
-            [3; 32],
         );
         // no validator change in the last epoch
         let epoch3 = epoch_manager.get_epoch_id(&h[3]).unwrap();
@@ -1643,7 +1640,6 @@ mod tests {
             60,
             fishermen_threshold,
             default_reward_calculator(),
-            [0; 32],
         );
 
         let h = hash_range(4);
@@ -1691,7 +1687,7 @@ mod tests {
         ];
         let epoch_length = 20;
         let mut epoch_manager =
-            setup_default_epoch_manager(validators.clone(), epoch_length, 1, 3, 0, 90, 60, [0; 32]);
+            setup_default_epoch_manager(validators.clone(), epoch_length, 1, 3, 0, 90, 60);
 
         let h = hash_range((5 * epoch_length - 1) as usize);
         // Have an alternate set of hashes to use on the other branch to avoid collisions.
@@ -1778,7 +1774,7 @@ mod tests {
 
         // Check that if we have a different epoch manager and apply only second branch we get the same results.
         let mut epoch_manager2 =
-            setup_default_epoch_manager(validators, epoch_length, 1, 3, 0, 90, 60, [0; 32]);
+            setup_default_epoch_manager(validators, epoch_length, 1, 3, 0, 90, 60);
         record_block(&mut epoch_manager2, CryptoHash::default(), h[0], 0, vec![]);
         build_branch(&mut epoch_manager2, h[0], &h2, &["test1", "test3"]);
         assert_eq!(
@@ -1802,7 +1798,6 @@ mod tests {
             0,
             90,
             60,
-            [0; 32],
         );
 
         let h = hash_range(6);
@@ -1831,7 +1826,7 @@ mod tests {
         ];
         let epoch_length = 10;
         let mut epoch_manager =
-            setup_default_epoch_manager(validators, epoch_length, 1, 2, 0, 90, 60, [0; 32]);
+            setup_default_epoch_manager(validators, epoch_length, 1, 2, 0, 90, 60);
         let h = hash_range((3 * epoch_length) as usize);
 
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
@@ -1878,7 +1873,7 @@ mod tests {
     #[test]
     fn test_validator_unstake() {
         let store = create_test_store();
-        let config = epoch_config(2, 1, 2, 0, 90, 60, 0, None, [0; 32]);
+        let config = epoch_config(2, 1, 2, 0, 90, 60, 0, None);
         let amount_staked = 1_000_000;
         let validators = vec![
             stake("test1".parse().unwrap(), amount_staked),
@@ -1951,7 +1946,7 @@ mod tests {
     #[test]
     fn test_slashing() {
         let store = create_test_store();
-        let config = epoch_config(2, 1, 2, 0, 90, 60, 0, None, [0; 32]);
+        let config = epoch_config(2, 1, 2, 0, 90, 60, 0, None);
         let amount_staked = 1_000_000;
         let validators = vec![
             stake("test1".parse().unwrap(), amount_staked),
@@ -2023,7 +2018,7 @@ mod tests {
     #[test]
     fn test_double_sign_slashing1() {
         let store = create_test_store();
-        let config = epoch_config(2, 1, 2, 0, 90, 60, 0, None, [0; 32]);
+        let config = epoch_config(2, 1, 2, 0, 90, 60, 0, None);
         let amount_staked = 1_000_000;
         let validators = vec![
             stake("test1".parse().unwrap(), amount_staked),
@@ -2109,8 +2104,7 @@ mod tests {
             ("test1".parse().unwrap(), amount_staked),
             ("test2".parse().unwrap(), amount_staked),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 2, 1, 2, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 2, 1, 2, 0, 90, 60);
 
         let h = hash_range(10);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
@@ -2154,8 +2148,7 @@ mod tests {
             ("test2".parse().unwrap(), stake_amount),
             ("test3".parse().unwrap(), stake_amount),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60);
         let h = hash_range(5);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         // all validators are trying to unstake.
@@ -2206,7 +2199,6 @@ mod tests {
             online_max_threshold: Rational::new(99, 100),
             num_seconds_per_year: 50,
         };
-        let rng_seed = [0; 32];
         let mut epoch_manager = setup_epoch_manager(
             validators,
             epoch_length,
@@ -2217,8 +2209,8 @@ mod tests {
             60,
             100,
             reward_calculator.clone(),
-            rng_seed,
         );
+        let rng_seed = [0; 32];
         let h = hash_range(5);
 
         epoch_manager
@@ -2320,7 +2312,6 @@ mod tests {
             60,
             100,
             reward_calculator.clone(),
-            [0; 32],
         );
         let h = hash_range(5);
         record_with_block_info(
@@ -2430,7 +2421,6 @@ mod tests {
             60,
             0,
             reward_calculator.clone(),
-            [0; 32],
         );
         let h = hash_range((2 * epoch_length + 1) as usize);
         record_with_block_info(
@@ -2540,8 +2530,7 @@ mod tests {
             ("test1".parse().unwrap(), amount_staked),
             ("test2".parse().unwrap(), amount_staked),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 2, 1, 2, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 2, 1, 2, 0, 90, 60);
         let h = hash_range(8);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         // test1 unstakes in epoch 1, and should be kicked out in epoch 3 (validators stored at h2).
@@ -2589,7 +2578,6 @@ mod tests {
         ];
         let epoch_length = 20;
         let total_supply = stake_amount * validators.len() as u128;
-        let rng_seed = [0; 32];
         let mut epoch_manager = setup_epoch_manager(
             validators,
             epoch_length,
@@ -2600,8 +2588,8 @@ mod tests {
             60,
             0,
             default_reward_calculator(),
-            rng_seed,
         );
+        let rng_seed = [0; 32];
         let hashes = hash_range((2 * epoch_length) as usize);
         record_block(&mut epoch_manager, Default::default(), hashes[0], 0, vec![]);
         let mut expected = 0;
@@ -2665,7 +2653,6 @@ mod tests {
         ];
         let epoch_length = 50;
         let total_supply = stake_amount * validators.len() as u128;
-        let rng_seed = [0; 32];
         let mut epoch_manager = setup_epoch_manager(
             validators,
             epoch_length,
@@ -2676,8 +2663,8 @@ mod tests {
             90,
             0,
             default_reward_calculator(),
-            rng_seed,
         );
+        let rng_seed = [0; 32];
         let hashes = hash_range((2 * epoch_length) as usize);
         record_block(&mut epoch_manager, Default::default(), hashes[0], 0, vec![]);
         let mut expected = 0;
@@ -2773,7 +2760,6 @@ mod tests {
             10,
             0,
             default_reward_calculator(),
-            [0; 32],
         );
         let h = hash_range(6);
         record_block(&mut em, Default::default(), h[0], 0, vec![]);
@@ -2815,7 +2801,6 @@ mod tests {
             10,
             0,
             default_reward_calculator(),
-            [0; 32],
         );
         let h = hash_range(6);
         record_block(&mut em, Default::default(), h[0], 0, vec![]);
@@ -2878,7 +2863,6 @@ mod tests {
             10,
             0,
             default_reward_calculator(),
-            [0; 32],
         );
         let h = hash_range(6);
         record_block(&mut em, Default::default(), h[0], 0, vec![]);
@@ -2921,7 +2905,6 @@ mod tests {
             10,
             0,
             default_reward_calculator(),
-            [0; 32],
         );
         let h = hash_range(10);
         record_block(&mut em, Default::default(), h[0], 0, vec![]);
@@ -2992,7 +2975,6 @@ mod tests {
             10,
             0,
             default_reward_calculator(),
-            [0; 32],
         );
         let h = hash_range(8);
         record_block(&mut em, Default::default(), h[0], 0, vec![]);
@@ -3051,7 +3033,6 @@ mod tests {
             70,
             0,
             default_reward_calculator(),
-            [0; 32],
         );
         let rng_seed = [0; 32];
         let hashes = hash_range((epoch_length + 2) as usize);
@@ -3132,8 +3113,7 @@ mod tests {
             ("test1".parse().unwrap(), amount_staked),
             ("test2".parse().unwrap(), amount_staked),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 2, 1, 2, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 2, 1, 2, 0, 90, 60);
         let h = hash_range(8);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         // test1 unstakes in epoch 1, and should be kicked out in epoch 3 (validators stored at h2).
@@ -3178,7 +3158,6 @@ mod tests {
             70,
             fishermen_threshold,
             default_reward_calculator(),
-            [0; 32],
         );
         let epoch_info = em.get_epoch_info(&EpochId::default()).unwrap();
         check_validators(&epoch_info, &[("test1", stake_amount), ("test2", stake_amount)]);
@@ -3214,7 +3193,6 @@ mod tests {
             70,
             fishermen_threshold,
             default_reward_calculator(),
-            [0; 32],
         );
         let h = hash_range(5);
         record_block(&mut em, CryptoHash::default(), h[0], 0, vec![]);
@@ -3245,8 +3223,7 @@ mod tests {
             ("test1".parse().unwrap(), stake_amount),
             ("test2".parse().unwrap(), stake_amount),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 2, 1, 1, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 2, 1, 1, 0, 90, 60);
         let h = hash_range(5);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         let epoch_id = epoch_manager.get_epoch_id(&h[0]).unwrap();
@@ -3277,8 +3254,7 @@ mod tests {
             ("test3".parse().unwrap(), stake_amount2),
         ];
         // have two seats to that 500 would be the threshold
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 2, 1, 2, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 2, 1, 2, 0, 90, 60);
         let h = hash_range(5);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         let epoch_id = epoch_manager.get_epoch_id(&h[0]).unwrap();
@@ -3316,16 +3292,8 @@ mod tests {
             ("test1".parse().unwrap(), stake_amount),
             ("test2".parse().unwrap(), stake_amount),
         ];
-        let mut epoch_manager = setup_default_epoch_manager(
-            validators,
-            (BLOCK_CACHE_SIZE + 1) as u64,
-            1,
-            2,
-            0,
-            90,
-            60,
-            [0; 32],
-        );
+        let mut epoch_manager =
+            setup_default_epoch_manager(validators, (BLOCK_CACHE_SIZE + 1) as u64, 1, 2, 0, 90, 60);
         let h = hash_range(BLOCK_CACHE_SIZE + 2);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         for i in 1..=(BLOCK_CACHE_SIZE + 1) {
@@ -3357,8 +3325,7 @@ mod tests {
             ("test3".parse().unwrap(), 10),
         ];
         // have two seats to that 500 would be the threshold
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 2, 1, 2, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 2, 1, 2, 0, 90, 60);
         let h = hash_range(5);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         record_block(
@@ -3413,8 +3380,7 @@ mod tests {
             ("test2".parse().unwrap(), stake_amount),
             ("test3".parse().unwrap(), stake_amount),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60);
         let h = hash_range(5);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         record_block(&mut epoch_manager, h[0], h[2], 2, vec![stake("test1".parse().unwrap(), 223)]);
@@ -3434,8 +3400,7 @@ mod tests {
             ("test2".parse().unwrap(), stake_amount),
             ("test3".parse().unwrap(), stake_amount),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60);
         let h = hash_range(9);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         record_block(&mut epoch_manager, h[0], h[1], 1, vec![stake("test1".parse().unwrap(), 0)]);
@@ -3485,8 +3450,7 @@ mod tests {
             ("test2".parse().unwrap(), stake_amount),
             ("test3".parse().unwrap(), stake_amount),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60);
         let h = hash_range(9);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         record_block_with_slashes(
@@ -3536,8 +3500,7 @@ mod tests {
             ("test2".parse().unwrap(), stake_amount),
             ("test3".parse().unwrap(), stake_amount),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60);
         let h = hash_range(9);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         record_block(&mut epoch_manager, h[0], h[1], 1, vec![stake("test1".parse().unwrap(), 0)]);
@@ -3590,8 +3553,7 @@ mod tests {
             ("test2".parse().unwrap(), stake_amount),
             ("test3".parse().unwrap(), stake_amount),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60);
         let h = hash_range(9);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         record_block_with_slashes(
@@ -3633,7 +3595,7 @@ mod tests {
         ];
         const EPOCH_LENGTH: u64 = 10;
         let mut epoch_manager =
-            setup_default_epoch_manager(validators, EPOCH_LENGTH, 1, 3, 0, 90, 60, [0; 32]);
+            setup_default_epoch_manager(validators, EPOCH_LENGTH, 1, 3, 0, 90, 60);
         let hashes = hash_range((8 * EPOCH_LENGTH + 1) as usize);
 
         record_block(&mut epoch_manager, CryptoHash::default(), hashes[0], 0, vec![]);
@@ -3725,8 +3687,7 @@ mod tests {
             ("test2".parse().unwrap(), stake_amount),
             ("test3".parse().unwrap(), stake_amount),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 1, 1, 3, 0, 90, 60);
         let h = hash_range(6);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         record_block(&mut epoch_manager, h[0], h[1], 1, vec![stake("test1".parse().unwrap(), 148)]);
@@ -3779,7 +3740,7 @@ mod tests {
     #[test]
     fn test_protocol_version_switch() {
         let store = create_test_store();
-        let config = epoch_config(2, 1, 2, 0, 90, 60, 0, None, [0; 32]);
+        let config = epoch_config(2, 1, 2, 0, 90, 60, 0, None);
         let amount_staked = 1_000_000;
         let validators = vec![
             stake("test1".parse().unwrap(), amount_staked),
@@ -3823,7 +3784,7 @@ mod tests {
             avg_hidden_validator_seats_per_shard: get_num_seats_per_shard(4, 0),
             shard_layout: shard_layout.clone(),
         };
-        let config = epoch_config(2, 1, 2, 0, 90, 60, 0, Some(shard_config), [0; 32]);
+        let config = epoch_config(2, 1, 2, 0, 90, 60, 0, Some(shard_config));
         let amount_staked = 1_000_000;
         let validators = vec![
             stake("test1".parse().unwrap(), amount_staked),
@@ -3913,7 +3874,6 @@ mod tests {
             shard_layout: ShardLayout::default(),
             #[cfg(feature = "protocol_feature_chunk_only_producers")]
             validator_selection_config: Default::default(),
-            rng_seed: [0; 32],
         };
         let config = AllEpochConfig::new(epoch_config, None);
         let amount_staked = 1_000_000;
@@ -3952,7 +3912,7 @@ mod tests {
     fn test_protocol_version_switch_after_switch() {
         let store = create_test_store();
         let epoch_length: usize = 10;
-        let config = epoch_config(epoch_length as u64, 1, 2, 0, 90, 60, 0, None, [0; 32]);
+        let config = epoch_config(epoch_length as u64, 1, 2, 0, 90, 60, 0, None);
         let amount_staked = 1_000_000;
         let validators = vec![
             stake("test1".parse().unwrap(), amount_staked),
@@ -4036,8 +3996,7 @@ mod tests {
             ("test1".parse().unwrap(), amount_staked),
             ("test2".parse().unwrap(), amount_staked),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 10, 1, 3, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 10, 1, 3, 0, 90, 60);
 
         let h = hash_range(10);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
@@ -4075,8 +4034,7 @@ mod tests {
             ("test1".parse().unwrap(), amount_staked),
             ("test2".parse().unwrap(), amount_staked),
         ];
-        let mut epoch_manager =
-            setup_default_epoch_manager(validators, 2, 1, 10, 0, 90, 60, [0; 32]);
+        let mut epoch_manager = setup_default_epoch_manager(validators, 2, 1, 10, 0, 90, 60);
         let h = hash_range(10);
         record_block(&mut epoch_manager, CryptoHash::default(), h[0], 0, vec![]);
         for i in 1..4 {
