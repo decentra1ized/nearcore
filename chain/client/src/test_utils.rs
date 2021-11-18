@@ -1135,6 +1135,7 @@ pub struct TestEnvBuilder {
     validators: Vec<AccountId>,
     runtime_adapters: Option<Vec<Arc<dyn RuntimeAdapter>>>,
     network_adapters: Option<Vec<Arc<MockPeerManagerAdapter>>>,
+    seeds: HashMap<AccountId, RngSeed>,
 }
 
 /// Builder for the [`TestEnv`] structure.
@@ -1143,7 +1144,16 @@ impl TestEnvBuilder {
     fn new(chain_genesis: ChainGenesis) -> Self {
         let clients = Self::make_accounts(1);
         let validators = clients.clone();
-        Self { chain_genesis, clients, validators, runtime_adapters: None, network_adapters: None }
+        let mut seeds: HashMap<AccountId, RngSeed> = HashMap::with_capacity(16);
+        seeds.insert(clients[0].clone(), [4; 32]);
+        Self {
+            chain_genesis,
+            clients,
+            validators,
+            runtime_adapters: None,
+            network_adapters: None,
+            seeds: seeds,
+        }
     }
 
     /// Sets list of client [`AccountId`]s to the one provided.  Panics if the
@@ -1151,6 +1161,12 @@ impl TestEnvBuilder {
     pub fn clients(mut self, clients: Vec<AccountId>) -> Self {
         assert!(!clients.is_empty());
         self.clients = clients;
+        self
+    }
+
+    /// Sets random seed for each client according to the provided HashMap.
+    pub fn clients_random_seeds(mut self, seeds: HashMap<AccountId, RngSeed>) -> Self {
+        self.seeds = seeds;
         self
     }
 
@@ -1199,13 +1215,6 @@ impl TestEnvBuilder {
         self
     }
 
-    pub fn seed_per_validator(self, _account_id: AccountId) -> RngSeed {
-        [
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-            25, 26, 27, 28, 29, 30, 31, 32,
-        ]
-    }
-
     /// Constructs new `TestEnv` structure.
     ///
     /// If no clients were configured (either through count or vector) one
@@ -1221,6 +1230,7 @@ impl TestEnvBuilder {
         let num_clients = clients.len();
         let validators = self.validators;
         let num_validators = validators.len();
+        let seeds = self.seeds;
         let network_adapters = self
             .network_adapters
             .unwrap_or_else(|| (0..num_clients).map(|_| Arc::new(Default::default())).collect());
@@ -1230,16 +1240,16 @@ impl TestEnvBuilder {
                 .into_iter()
                 .zip(network_adapters.iter())
                 .map(|(account_id, network_adapter)| {
-                    let rng_seed = [
-                        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-                        22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-                    ];
+                    let rng_seed = match seeds.get(&account_id) {
+                        Some(seed) => seed.clone(),
+                        None => [4; 32],
+                    };
                     setup_client(
                         create_test_store(),
                         vec![validators.clone()],
                         1,
                         1,
-                        Some(account_id.clone()),
+                        Some(account_id),
                         false,
                         network_adapter.clone(),
                         chain_genesis.clone(),
@@ -1254,6 +1264,10 @@ impl TestEnvBuilder {
                     .zip((&network_adapters).iter())
                     .zip(runtime_adapters.into_iter())
                     .map(|((account_id, network_adapter), runtime_adapter)| {
+                        let rng_seed = match seeds.get(&account_id) {
+                            Some(seed) => seed.clone(),
+                            None => [4; 32],
+                        };
                         setup_client_with_runtime(
                             u64::try_from(num_validators).unwrap(),
                             Some(account_id.clone()),
@@ -1261,10 +1275,7 @@ impl TestEnvBuilder {
                             network_adapter.clone(),
                             chain_genesis.clone(),
                             runtime_adapter,
-                            [
-                                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-                                20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-                            ],
+                            rng_seed,
                         )
                     })
                     .collect()
