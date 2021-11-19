@@ -49,7 +49,6 @@ use crate::peer_manager::peer_store::{PeerStore, TrustLevel};
     feature = "protocol_feature_routing_exchange_algorithm"
 ))]
 use crate::routing::edge::SimpleEdge;
-use crate::routing::edge::{Edge, EdgeInfo};
 use crate::routing::edge::{Edge, EdgeInfo, EdgeType};
 use crate::routing::edge_verifier_actor::{EdgeVerifierActor, EdgeVerifierHelper};
 use crate::routing::routing::{
