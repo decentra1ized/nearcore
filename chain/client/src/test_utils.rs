@@ -1126,6 +1126,7 @@ pub struct TestEnv {
     pub network_adapters: Vec<Arc<MockPeerManagerAdapter>>,
     pub clients: Vec<Client>,
     account_to_client_index: HashMap<AccountId, usize>,
+    seeds: HashMap<AccountId, RngSeed>,
 }
 
 /// A builder for the TestEnv structure.
@@ -1293,6 +1294,7 @@ impl TestEnvBuilder {
                 .enumerate()
                 .map(|(index, client)| (client, index))
                 .collect(),
+            seeds,
         }
     }
 
@@ -1440,6 +1442,11 @@ impl TestEnv {
     /// customisation will be lost.
     pub fn restart(&mut self, idx: usize) {
         let store = self.clients[idx].chain.store().owned_store();
+        let account_id = self.get_client_id(idx).clone();
+        let rng_seed = match self.seeds.get(&account_id) {
+            Some(seed) => seed.clone(),
+            None => [4; 32],
+        };
         self.clients[idx] = setup_client(
             store,
             vec![self.validators.clone()],
@@ -1449,7 +1456,7 @@ impl TestEnv {
             false,
             self.network_adapters[idx].clone(),
             self.chain_genesis.clone(),
-            self.clients[idx].shards_mgr.random_seed(0),
+            rng_seed,
         )
     }
 

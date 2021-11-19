@@ -1,4 +1,5 @@
 use std::cmp;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{btree_map, hash_map, BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -779,11 +780,7 @@ impl ShardsManager {
 
     /// Returns true if transaction is not in the pool before call
     pub fn insert_transaction(&mut self, shard_id: ShardId, tx: SignedTransaction) -> bool {
-        let seed = self.random_seed(shard_id);
-        self.tx_pools
-            .entry(shard_id)
-            .or_insert_with(|| TransactionPool::new(seed))
-            .insert_transaction(tx)
+        self.pool_for_shard(shard_id).insert_transaction(tx)
     }
 
     pub fn remove_transactions(
@@ -795,17 +792,22 @@ impl ShardsManager {
             pool.remove_transactions(transactions)
         }
     }
+    fn pool_for_shard(&mut self, shard_id: ShardId) -> &mut TransactionPool {
+        match self.tx_pools.entry(shard_id) {
+            Vacant(_) => {
+                self.tx_pools.insert(shard_id, TransactionPool::new(self.random_seed(shard_id)));
+            }
+            Occupied(_) => {}
+        };
+        self.tx_pools.get_mut(&shard_id).unwrap()
+    }
 
     pub fn reintroduce_transactions(
         &mut self,
         shard_id: ShardId,
         transactions: &Vec<SignedTransaction>,
     ) {
-        let seed = self.random_seed(shard_id);
-        self.tx_pools
-            .entry(shard_id)
-            .or_insert_with(|| TransactionPool::new(seed))
-            .reintroduce_transactions(transactions.clone());
+        self.pool_for_shard(shard_id).reintroduce_transactions(transactions.clone());
     }
 
     pub fn group_receipts_by_shard(
@@ -1732,10 +1734,15 @@ impl ShardsManager {
 
         Ok(())
     }
-    pub fn random_seed(&self, shard_id: ShardId) -> RngSeed {
+
+    /// Computes a deterministic random seed for given `shard_id`.
+    /// This seed is used to randomize the transaction pool.
+    /// For better security we want the seed to different in each shard.
+    /// For testing purposes we want it to be the reproducible and derived from the `self.rng_seed` and `shard_id`
+    fn random_seed(&self, shard_id: ShardId) -> RngSeed {
         let mut res = self.rng_seed.clone();
-        res[17] = shard_id as u8;
-        res[23] = (shard_id / 256) as u8;
+        res[17] = (shard_id + 777) as u8;
+        res[23] = ((shard_id + 681) / 256) as u8;
         res
     }
 }
