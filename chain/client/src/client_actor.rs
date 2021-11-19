@@ -1687,6 +1687,18 @@ impl Handler<StateSplitResponse> for ClientActor {
     }
 }
 
+/// Returns random seed sampled from the current thread
+pub fn random_seed_from_thread() -> RngSeed {
+    let mut rng_seed: RngSeed = [0; 32];
+    for j in 0..3 {
+        let thread_rng_seed = rand::thread_rng().next_u64().to_le_bytes().to_vec();
+        for i in 0..8 {
+            rng_seed[j * 8 + i] = thread_rng_seed[i];
+        }
+    }
+    rng_seed
+}
+
 /// Starts client in a separate Arbiter (thread).
 pub fn start_client(
     client_config: ClientConfig,
@@ -1699,12 +1711,6 @@ pub fn start_client(
     #[cfg(feature = "test_features")] adv: Arc<RwLock<AdversarialControls>>,
 ) -> (Addr<ClientActor>, ArbiterHandle) {
     let client_arbiter_handle = Arbiter::current();
-    let mut rng_seed = [4; 32];
-    let thread_rng_seed = rand::thread_rng().next_u64().to_le_bytes().to_vec();
-    for i in 0..8 {
-        rng_seed[i] = thread_rng_seed[i];
-    }
-
     let client_addr = ClientActor::start_in_arbiter(&client_arbiter_handle, move |ctx| {
         ClientActor::new(
             client_config,
@@ -1715,7 +1721,7 @@ pub fn start_client(
             validator_signer,
             telemetry_actor,
             true,
-            rng_seed,
+            random_seed_from_thread(),
             ctx,
             #[cfg(feature = "test_features")]
             adv,
