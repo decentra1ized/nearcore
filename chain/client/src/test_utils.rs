@@ -63,6 +63,7 @@ use near_primitives::utils::MaybeValidated;
 
 pub type PeerManagerMock = Mocker<PeerManagerActor>;
 
+const TEST_SEED: RngSeed = [3; 32];
 /// Sets up ClientActor and ViewClientActor viewing the same store/runtime.
 pub fn setup(
     validators: Vec<Vec<AccountId>>,
@@ -148,7 +149,7 @@ pub fn setup(
         Some(signer),
         telemetry,
         enable_doomslug,
-        [4; 32],
+        TEST_SEED,
         ctx,
         #[cfg(feature = "test_features")]
         adv,
@@ -1126,6 +1127,8 @@ pub struct TestEnv {
     pub network_adapters: Vec<Arc<MockPeerManagerAdapter>>,
     pub clients: Vec<Client>,
     account_to_client_index: HashMap<AccountId, usize>,
+    // random seed to be inject in each client according to AccountId
+    // if not set, a default constant TEST_SEED will be injected
     seeds: HashMap<AccountId, RngSeed>,
 }
 
@@ -1136,6 +1139,8 @@ pub struct TestEnvBuilder {
     validators: Vec<AccountId>,
     runtime_adapters: Option<Vec<Arc<dyn RuntimeAdapter>>>,
     network_adapters: Option<Vec<Arc<MockPeerManagerAdapter>>>,
+    // random seed to be inject in each client according to AccountId
+    // if not set, a default constant TEST_SEED will be injected
     seeds: HashMap<AccountId, RngSeed>,
 }
 
@@ -1145,8 +1150,7 @@ impl TestEnvBuilder {
     fn new(chain_genesis: ChainGenesis) -> Self {
         let clients = Self::make_accounts(1);
         let validators = clients.clone();
-        let mut seeds: HashMap<AccountId, RngSeed> = HashMap::with_capacity(16);
-        seeds.insert(clients[0].clone(), [4; 32]);
+        let seeds: HashMap<AccountId, RngSeed> = HashMap::with_capacity(1);
         Self {
             chain_genesis,
             clients,
@@ -1243,7 +1247,7 @@ impl TestEnvBuilder {
                 .map(|(account_id, network_adapter)| {
                     let rng_seed = match seeds.get(&account_id) {
                         Some(seed) => seed.clone(),
-                        None => [4; 32],
+                        None => TEST_SEED,
                     };
                     setup_client(
                         create_test_store(),
@@ -1267,7 +1271,7 @@ impl TestEnvBuilder {
                     .map(|((account_id, network_adapter), runtime_adapter)| {
                         let rng_seed = match seeds.get(&account_id) {
                             Some(seed) => seed.clone(),
-                            None => [4; 32],
+                            None => TEST_SEED,
                         };
                         setup_client_with_runtime(
                             u64::try_from(num_validators).unwrap(),
@@ -1445,7 +1449,7 @@ impl TestEnv {
         let account_id = self.get_client_id(idx).clone();
         let rng_seed = match self.seeds.get(&account_id) {
             Some(seed) => seed.clone(),
-            None => [4; 32],
+            None => TEST_SEED,
         };
         self.clients[idx] = setup_client(
             store,

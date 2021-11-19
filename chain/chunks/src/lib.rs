@@ -399,6 +399,8 @@ pub struct ShardsManager {
     chunk_forwards_cache: SizedCache<ChunkHash, HashMap<u64, PartialEncodedChunkPart>>,
 
     seals_mgr: SealsManager,
+    // Useful to make tests deterministic and reproducible,
+    // while keeping the security of randomization of transactions in pool
     rng_seed: RngSeed,
 }
 
@@ -1741,6 +1743,9 @@ impl ShardsManager {
     /// For testing purposes we want it to be the reproducible and derived from the `self.rng_seed` and `shard_id`
     fn random_seed(&self, shard_id: ShardId) -> RngSeed {
         let mut res = self.rng_seed.clone();
+        // Note: The 'magic' constants are chosen without any logic
+        // Any arbitrary calculation can work here, as long as,
+        // it's deterministic and returns different result per shard_id
         res[17] = (shard_id + 777) as u8;
         res[23] = ((shard_id + 681) / 256) as u8;
         res
@@ -1770,6 +1775,8 @@ mod test {
         near_primitives::validator_signer::InMemoryValidatorSigner,
     };
 
+    const TEST_SEED: RngSeed = [3; 32];
+
     /// should not request partial encoded chunk from self
     #[test]
     fn test_request_partial_encoded_chunk_from_self() {
@@ -1779,7 +1786,7 @@ mod test {
             Some("test".parse().unwrap()),
             runtime_adapter,
             network_adapter.clone(),
-            [3; 32],
+            TEST_SEED,
         );
         let added = Clock::instant();
         shards_manager.requested_partial_encoded_chunks.insert(
@@ -1835,7 +1842,7 @@ mod test {
             Some("test".parse().unwrap()),
             runtime_adapter.clone(),
             network_adapter.clone(),
-            [3; 32],
+            TEST_SEED,
         );
         let signer =
             InMemoryValidatorSigner::from_seed("test".parse().unwrap(), KeyType::ED25519, "test");
@@ -2002,7 +2009,7 @@ mod test {
             Some(fixture.mock_chunk_part_owner.clone()),
             fixture.mock_runtime.clone(),
             fixture.mock_network.clone(),
-            [3; 32],
+            TEST_SEED,
         );
         let partial_encoded_chunk = fixture.make_partial_encoded_chunk(&fixture.mock_part_ords);
         let result = shards_manager
@@ -2060,7 +2067,7 @@ mod test {
             Some(fixture.mock_shard_tracker.clone()),
             fixture.mock_runtime.clone(),
             fixture.mock_network.clone(),
-            [3; 32],
+            TEST_SEED,
         );
         let (most_parts, other_parts) = {
             let mut most_parts = fixture.mock_chunk_parts.clone();

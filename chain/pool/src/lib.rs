@@ -213,6 +213,8 @@ mod tests {
     use near_primitives::hash::CryptoHash;
     use near_primitives::types::Balance;
 
+    const TEST_SEED: RngSeed = [3; 32];
+
     fn generate_transactions(
         signer_id: &str,
         signer_seed: &str,
@@ -240,7 +242,7 @@ mod tests {
         mut transactions: Vec<SignedTransaction>,
         expected_weight: u32,
     ) -> (Vec<u64>, TransactionPool) {
-        let mut pool = TransactionPool::new([3; 32]);
+        let mut pool = TransactionPool::new(TEST_SEED);
         let mut rng = thread_rng();
         transactions.shuffle(&mut rng);
         for tx in transactions {
@@ -351,7 +353,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        let mut pool = TransactionPool::new([3; 32]);
+        let mut pool = TransactionPool::new(TEST_SEED);
         let mut rng = thread_rng();
         transactions.shuffle(&mut rng);
         for tx in transactions.clone() {
