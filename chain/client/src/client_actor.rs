@@ -9,8 +9,7 @@ use actix::dev::ToEnvelope;
 use actix::{Actor, Addr, Arbiter, AsyncContext, Context, Handler, Message};
 use actix_rt::ArbiterHandle;
 use borsh::BorshSerialize;
-use chrono::DateTime;
-use chrono::Duration as OldDuration;
+use chrono::{DateTime, Duration as OldDuration};
 use log::{debug, error, info, trace, warn};
 use near_primitives::time::{Clock, Utc};
 
@@ -31,9 +30,9 @@ use near_crypto::Signature;
 #[cfg(feature = "sandbox")]
 use near_network::types::SandboxResponse;
 use near_network::types::{
-    NetworkClientMessages, NetworkClientResponses, NetworkRequests, PeerManagerAdapter,
+    NetworkClientMessages, NetworkClientResponses, NetworkInfo, NetworkRequests,
+    PeerManagerAdapter, PeerManagerMessageRequest,
 };
-use near_network::types::{NetworkInfo, PeerManagerMessageRequest};
 #[cfg(feature = "test_features")]
 use near_network_primitives::types::NetworkAdversarialMessage;
 #[cfg(feature = "sandbox")]
