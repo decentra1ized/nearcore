@@ -120,7 +120,7 @@ fn peer_id_type_field_len(enum_var: u8) -> Option<usize> {
     }
 }
 
-pub(crate) fn is_forward_tx(bytes: &[u8]) -> Option<bool> {
+pub(crate) fn is_forward_transaction(bytes: &[u8]) -> Option<bool> {
     let peer_message_variant = *bytes.get(0)?;
 
     // PeerMessage::Routed variant == 13
@@ -266,7 +266,7 @@ mod test {
         schemas.for_each(|s| {
             let msg = create_tx_forward(s);
             let bytes = msg.try_to_vec().unwrap();
-            assert!(is_forward_tx(&bytes).unwrap());
+            assert!(is_forward_transaction(&bytes).unwrap());
         })
     }
 

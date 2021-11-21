@@ -10,6 +10,7 @@ use actix::{
     Actor, ActorContext, ActorFuture, Addr, Arbiter, AsyncContext, Context, ContextFutureSpawner,
     Handler, Recipient, Running, StreamHandler, WrapFuture,
 };
+use borsh::BorshDeserialize;
 use cached::{Cached, SizedCache};
 use tracing::{debug, error, info, trace, warn};
 
@@ -58,7 +59,7 @@ const MAX_PEER_MSG_PER_MIN: u64 = u64::MAX;
 /// Maximum number of transaction messages we will accept between block messages.
 /// The purpose of this constant is to ensure we do not spend too much time deserializing and
 /// dispatching transactions when we should be focusing on consensus-related messages.
-const MAX_TXNS_PER_BLOCK_MESSAGE: usize = 1000;
+const MAX_TRANSACTIONS_PER_BLOCK_MESSAGE: usize = 1000;
 /// Limit cache size of 1000 messages
 pub const ROUTED_MESSAGE_CACHE_SIZE: usize = 1000;
 /// Duplicated messages will be dropped if routed through the same peer multiple times.
@@ -100,6 +101,7 @@ pub struct PeerActor {
     /// Dynamic Prometheus metrics
     network_metrics: NetworkMetrics,
     /// How many transactions we have received since the last block message
+    /// Note: Shared between multiple Peers.
     txns_since_last_block: Arc<AtomicUsize>,
     /// How many peer actors are created
     peer_counter: Arc<AtomicUsize>,
@@ -545,6 +547,82 @@ impl PeerActor {
             }
         }
     }
+
+    /// Check whenever `Codec::decode` method banned peer for message being too long.
+    /// If so bans peers
+    /// or returns the decoded message.
+    fn check_if_decoder_banned_peer(
+        &mut self,
+        msg: Result<Vec<u8>, ReasonForBan>,
+        ctx: &mut Context<PeerActor>,
+    ) -> Option<Vec<u8>> {
+        let msg = match msg {
+            Ok(msg) => msg,
+            Err(ban_reason) => {
+                self.ban_peer(ctx, ban_reason);
+                return None;
+            }
+        };
+        Some(msg)
+    }
+
+    /// Update stats when receiving msg
+    fn update_stats_on_receiving_message(&mut self, msg_len: usize) {
+        metrics::PEER_DATA_RECEIVED_BYTES.inc_by(msg_len as u64);
+        metrics::PEER_MESSAGE_RECEIVED_TOTAL.inc();
+        self.tracker.increment_received(msg_len as u64);
+    }
+
+    /// Check whenever we exceeded number of transactions we got since last block.
+    /// If so, drop the transaction.
+    fn should_we_drop_msg_without_decoding(&mut self, msg: &Vec<u8>) -> bool {
+        if codec::is_forward_transaction(&msg).unwrap_or(false) {
+            let r = self.txns_since_last_block.load(Ordering::Acquire);
+            if r > MAX_TRANSACTIONS_PER_BLOCK_MESSAGE {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Decodes message using `BorshDeserialize
+    /// Somehow checks if there is a version mismatch. How exactly you ask, that's a great question?
+    /// TODO: Figure this out.
+    fn try_to_decode_to_peer_message(&mut self, msg: &Vec<u8>) -> Option<PeerMessage> {
+        let mut peer_msg = match PeerMessage::try_from_slice(&msg) {
+            Ok(peer_msg) => peer_msg,
+            // err is std::io::Error
+            // TODO: Document how exactly what is going on?
+            Err(err) => {
+                if let Some(version) = err
+                    .get_ref()
+                    .and_then(|err| err.downcast_ref::<HandshakeFailureReason>())
+                    .and_then(|inner| {
+                        if let HandshakeFailureReason::ProtocolVersionMismatch { version, .. } =
+                            *inner
+                        {
+                            Some(version)
+                        } else {
+                            None
+                        }
+                    })
+                {
+                    debug!(target: "network", "Received connection from node with unsupported version: {}", version);
+                    self.send_message(&PeerMessage::HandshakeFailure(
+                        self.node_info.clone(),
+                        HandshakeFailureReason::ProtocolVersionMismatch {
+                            version: PROTOCOL_VERSION,
+                            oldest_supported_version: OLDEST_BACKWARD_COMPATIBLE_PROTOCOL_VERSION,
+                        },
+                    ));
+                } else {
+                    info!(target: "network", "Received invalid data {:?} from {}: {}", logging::pretty_vec(&msg), self.peer_info, err);
+                }
+                return None;
+            }
+        };
+        Some(peer_msg)
+    }
 }
 
 impl Actor for PeerActor {
@@ -608,55 +686,24 @@ impl WriteHandler<io::Error> for PeerActor {}
 impl StreamHandler<Result<Vec<u8>, ReasonForBan>> for PeerActor {
     #[perf]
     fn handle(&mut self, msg: Result<Vec<u8>, ReasonForBan>, ctx: &mut Self::Context) {
-        let msg = match msg {
-            Ok(msg) => msg,
-            Err(ban_reason) => {
-                self.ban_peer(ctx, ban_reason);
-                return;
-            }
+        let msg = if let Some(msg) = self.check_if_decoder_banned_peer(msg, ctx) {
+            msg
+        } else {
+            return;
         };
         // TODO(#5155) We should change our code to track size of messages received from Peer
         // as long as it travels to PeerManager, etc.
 
-        metrics::PEER_DATA_RECEIVED_BYTES.inc_by(msg.len() as u64);
-        metrics::PEER_MESSAGE_RECEIVED_TOTAL.inc();
+        self.update_stats_on_receiving_message(msg.len());
 
-        self.tracker.increment_received(msg.len() as u64);
-        if codec::is_forward_tx(&msg).unwrap_or(false) {
-            let r = self.txns_since_last_block.load(Ordering::Acquire);
-            if r > MAX_TXNS_PER_BLOCK_MESSAGE {
-                return;
-            }
+        if self.should_we_drop_msg_without_decoding(&msg) {
+            return;
         }
-        let mut peer_msg = match bytes_to_peer_message(&msg) {
-            Ok(peer_msg) => peer_msg,
-            Err(err) => {
-                if let Some(version) = err
-                    .get_ref()
-                    .and_then(|err| err.downcast_ref::<HandshakeFailureReason>())
-                    .and_then(|inner| {
-                        if let HandshakeFailureReason::ProtocolVersionMismatch { version, .. } =
-                            *inner
-                        {
-                            Some(version)
-                        } else {
-                            None
-                        }
-                    })
-                {
-                    debug!(target: "network", "Received connection from node with unsupported version: {}", version);
-                    self.send_message(&PeerMessage::HandshakeFailure(
-                        self.node_info.clone(),
-                        HandshakeFailureReason::ProtocolVersionMismatch {
-                            version: PROTOCOL_VERSION,
-                            oldest_supported_version: OLDEST_BACKWARD_COMPATIBLE_PROTOCOL_VERSION,
-                        },
-                    ));
-                } else {
-                    info!(target: "network", "Received invalid data {:?} from {}: {}", logging::pretty_vec(&msg), self.peer_info, err);
-                }
-                return;
-            }
+
+        let mut peer_msg = if let Some(peer_msg) = self.try_to_decode_to_peer_message(&msg) {
+            peer_msg
+        } else {
+            return;
         };
 
         // Drop duplicated messages routed within DROP_DUPLICATED_MESSAGES_PERIOD ms
