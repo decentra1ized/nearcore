@@ -39,7 +39,7 @@ impl Encoder<Vec<u8>> for Codec {
     type Error = Error;
 
     fn encode(&mut self, item: Vec<u8>, buf: &mut BytesMut) -> Result<(), Error> {
-        if item.len() as u64 > NETWORK_MESSAGE_MAX_SIZE_BYTES as u64 {
+        if item.len() > NETWORK_MESSAGE_MAX_SIZE_BYTES as usize {
             Err(Error::new(ErrorKind::InvalidInput, "Input is too long"))
         } else {
             #[cfg(feature = "performance_stats")]
