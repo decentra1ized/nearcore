@@ -2212,14 +2212,12 @@ impl PeerManagerActor {
     }
 }
 
-impl Handler<ActixMessageWrapper<PeerManagerMessageRequest, PeerManagerMessageResponse>>
-    for PeerManagerActor
-{
+impl Handler<ActixMessageWrapper<PeerManagerMessageRequest>> for PeerManagerActor {
     type Result = ActixMessageResponse<PeerManagerMessageResponse>;
 
     fn handle(
         &mut self,
-        msg: ActixMessageWrapper<PeerManagerMessageRequest, PeerManagerMessageResponse>,
+        msg: ActixMessageWrapper<PeerManagerMessageRequest>,
         ctx: &mut Self::Context,
     ) -> Self::Result {
         // Unpack throttle controller

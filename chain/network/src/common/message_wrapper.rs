@@ -1,7 +1,6 @@
 use actix::dev::MessageResponse;
 use actix::Message;
 use near_rate_limiter::{ThrottleController, ThrottleToken};
-use std::marker::PhantomData;
 
 // Wrapper around Actix messages, used to track size of all messages sent to PeerManager.
 // TODO(#5155) Finish implementation of this.
@@ -12,19 +11,18 @@ use std::marker::PhantomData;
 /// - Add needed decorators. Probably `Debug`, `Message` from Actix, etc.
 /// - Add two rate limiters (local per peer, global one)
 /// - Any other metadata we need debugging, etc.
-pub struct ActixMessageWrapper<T, Q> {
+pub struct ActixMessageWrapper<T> {
     msg: T,
     throttle_token: ThrottleToken,
-    ph: PhantomData<Q>,
 }
 
-impl<T, Q> ActixMessageWrapper<T, Q> {
+impl<T> ActixMessageWrapper<T> {
     pub fn new_without_size(msg: T, throttle_controller: ThrottleController) -> Self {
-        Self { msg, throttle_token: ThrottleToken::new(throttle_controller, 0), ph: PhantomData }
+        Self { msg, throttle_token: ThrottleToken::new(throttle_controller, 0) }
     }
 
     #[allow(unused)]
-    pub fn into_inner(mut self) -> (T) {
+    pub fn into_inner(mut self) -> T {
         return self.msg;
     }
 
@@ -34,11 +32,8 @@ impl<T, Q> ActixMessageWrapper<T, Q> {
     }
 }
 
-impl<T, Q> Message for ActixMessageWrapper<T, Q>
-where
-    Q: 'static,
-{
-    type Result = ActixMessageResponse<Q>;
+impl<T: Message> Message for ActixMessageWrapper<T> {
+    type Result = ActixMessageResponse<T::Result>;
 }
 
 #[derive(MessageResponse)]
@@ -57,7 +52,7 @@ impl<T> ActixMessageResponse<T> {
     }
 
     #[allow(unused)]
-    pub fn into_inner(mut self) -> (T) {
+    pub fn into_inner(mut self) -> T {
         return self.msg;
     }
 
