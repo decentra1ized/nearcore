@@ -15,19 +15,14 @@ use near_rust_allocator_proxy::allocator::get_tid;
 use crate::stats::metrics;
 use crate::types::PeerMessage;
 
-const NETWORK_MESSAGE_MAX_SIZE: u32 = 512 * MIB as u32;
-const MAX_CAPACITY: u64 = GIB;
+/// Maximum size of network message in encoded format.
+/// The size of message is stored as `u32`, so the limit has type `u32`
+const NETWORK_MESSAGE_MAX_SIZE_BYTES: u32 = 512 * MIB as u32;
+/// Maximum capacity of write buffer in bytes.
+const MAX_WRITE_BUFFER_CAPACITY_BYTES: usize = GIB as usize;
 
-pub struct Codec {
-    max_length: u32,
-}
-
-#[allow(clippy::new_without_default)]
-impl Codec {
-    pub fn new() -> Self {
-        Codec { max_length: NETWORK_MESSAGE_MAX_SIZE as u32 }
-    }
-}
+#[derive(Default)]
+pub struct Codec {}
 
 impl EncoderCallBack for Codec {
     #[allow(unused)]
@@ -44,7 +39,7 @@ impl Encoder<Vec<u8>> for Codec {
     type Error = Error;
 
     fn encode(&mut self, item: Vec<u8>, buf: &mut BytesMut) -> Result<(), Error> {
-        if item.len() > self.max_length as usize {
+        if item.len() as u64 > NETWORK_MESSAGE_MAX_SIZE_BYTES as u64 {
             Err(Error::new(ErrorKind::InvalidInput, "Input is too long"))
         } else {
             #[cfg(feature = "performance_stats")]
@@ -56,7 +51,7 @@ impl Encoder<Vec<u8>> for Codec {
                     buf.capacity(),
                 );
             }
-            if buf.capacity() >= MAX_CAPACITY as usize
+            if buf.capacity() >= MAX_WRITE_BUFFER_CAPACITY_BYTES
                 && item.len() + 4 + buf.len() > buf.capacity()
             {
                 error!(target: "network", "{} throwing away message, because buffer is full item.len(): {} buf.capacity: {}", get_tid(), item.len(), buf.capacity());
@@ -86,7 +81,7 @@ impl Decoder for Codec {
         let mut len_bytes: [u8; 4] = [0; 4];
         len_bytes.copy_from_slice(&buf[0..4]);
         let len = u32::from_le_bytes(len_bytes);
-        if len > self.max_length {
+        if len > NETWORK_MESSAGE_MAX_SIZE_BYTES {
             // If this point is reached, abusive peer is banned.
             return Ok(Some(Err(ReasonForBan::Abusive)));
         }
@@ -180,7 +175,7 @@ mod test {
     use crate::types::{Handshake, HandshakeFailureReason, HandshakeV2, SyncData};
 
     fn test_codec(msg: PeerMessage) {
-        let mut codec = Codec::new();
+        let mut codec = Codec::default();
         let mut buffer = BytesMut::new();
         codec.encode(peer_message_to_bytes(&msg).unwrap(), &mut buffer).unwrap();
         let decoded = codec.decode(&mut buffer).unwrap().unwrap().unwrap();
@@ -328,7 +323,7 @@ mod test {
         };
         let msg = PeerMessage::HandshakeV2(fake_handshake);
 
-        let mut codec = Codec::new();
+        let mut codec = Codec::default();
         let mut buffer = BytesMut::new();
         codec.encode(peer_message_to_bytes(&msg).unwrap(), &mut buffer).unwrap();
         let decoded = codec.decode(&mut buffer).unwrap().unwrap().unwrap();
@@ -404,19 +399,19 @@ mod test {
 
     #[test]
     fn test_abusive() {
-        let mut codec = Codec::new();
+        let mut codec = Codec::default();
         let mut buffer = BytesMut::new();
         buffer.reserve(4);
-        buffer.put_u32_le(NETWORK_MESSAGE_MAX_SIZE + 1);
+        buffer.put_u32_le(NETWORK_MESSAGE_MAX_SIZE_BYTES + 1);
         assert_eq!(codec.decode(&mut buffer).unwrap(), Some(Err(ReasonForBan::Abusive)));
     }
 
     #[test]
     fn test_not_abusive() {
-        let mut codec = Codec::new();
+        let mut codec = Codec::default();
         let mut buffer = BytesMut::new();
         buffer.reserve(4);
-        buffer.put_u32_le(NETWORK_MESSAGE_MAX_SIZE);
+        buffer.put_u32_le(NETWORK_MESSAGE_MAX_SIZE_BYTES);
         assert_ne!(codec.decode(&mut buffer).unwrap(), Some(Err(ReasonForBan::Abusive)));
     }
 }
