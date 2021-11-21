@@ -1743,11 +1743,8 @@ impl ShardsManager {
     /// For testing purposes we want it to be the reproducible and derived from the `self.rng_seed` and `shard_id`
     fn random_seed(&self, shard_id: ShardId) -> RngSeed {
         let mut res = self.rng_seed.clone();
-        // Note: The 'magic' constants are chosen without any logic
-        // Any arbitrary calculation can work here, as long as,
-        // it's deterministic and returns different result per shard_id
-        res[17] = (shard_id + 777) as u8;
-        res[23] = ((shard_id + 681) / 256) as u8;
+        res[0] = shard_id as u8;
+        res[1] = (shard_id / 256) as u8;
         res
     }
 }

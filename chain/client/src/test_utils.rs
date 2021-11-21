@@ -1157,7 +1157,7 @@ impl TestEnvBuilder {
             validators,
             runtime_adapters: None,
             network_adapters: None,
-            seeds: seeds,
+            seeds,
         }
     }
 

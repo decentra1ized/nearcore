@@ -13,7 +13,7 @@ use chrono::DateTime;
 use chrono::Duration as OldDuration;
 use log::{debug, error, info, trace, warn};
 use near_primitives::time::{Clock, Utc};
-use rand::RngCore;
+use rand::Rng;
 
 #[cfg(feature = "delay_detector")]
 use delay_detector::DelayDetector;
@@ -1690,12 +1690,7 @@ impl Handler<StateSplitResponse> for ClientActor {
 /// Returns random seed sampled from the current thread
 pub fn random_seed_from_thread() -> RngSeed {
     let mut rng_seed: RngSeed = [0; 32];
-    for j in 0..3 {
-        let thread_rng_seed = rand::thread_rng().next_u64().to_le_bytes().to_vec();
-        for i in 0..8 {
-            rng_seed[j * 8 + i] = thread_rng_seed[i];
-        }
-    }
+    rand::thread_rng().fill(&mut rng_seed);
     rng_seed
 }
 
