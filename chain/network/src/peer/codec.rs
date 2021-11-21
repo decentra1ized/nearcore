@@ -120,6 +120,9 @@ fn peer_id_type_field_len(enum_var: u8) -> Option<usize> {
     }
 }
 
+/// Checks `bytes` represents `PeerMessage::Routed(RoutedMessage)`,
+/// and `RoutedMessage.body` has type of `RoutedMessageBody::ForwardTx`.
+/// This is done manually as a hack, to avoid having to run expensive `PeerMessage::try_from_slice(bytes)`.
 pub(crate) fn is_forward_tx(bytes: &[u8]) -> Option<bool> {
     let peer_message_variant = *bytes.get(0)?;
 
@@ -129,6 +132,7 @@ pub(crate) fn is_forward_tx(bytes: &[u8]) -> Option<bool> {
     }
 
     let target_field_variant = *bytes.get(1)?;
+    // skip over `pub target: PeerIdOrHash` attribute`
     let target_field_len = if target_field_variant == 0 {
         // PeerIdOrHash::PeerId
         let peer_id_variant = *bytes.get(2)?;
@@ -137,15 +141,19 @@ pub(crate) fn is_forward_tx(bytes: &[u8]) -> Option<bool> {
         // PeerIdOrHash::Hash is always 32 bytes
         32
     } else {
+        error!("Unsupported variant of PeerIdOrHash {}", target_field_variant);
         return None;
     };
 
     let author_variant_idx = 2 + target_field_len;
     let author_variant = *bytes.get(author_variant_idx)?;
+    // skip over `pub author: PeerId`
     let author_field_len = peer_id_type_field_len(author_variant)?;
 
     let signature_variant_idx = author_variant_idx + author_field_len;
     let signature_variant = *bytes.get(signature_variant_idx)?;
+
+    // skip over `pub signature: Signature`
     let signature_field_len = match signature_variant {
         0 => 1 + 64, // Signature::ED25519
         1 => 1 + 65, // Signature::SECP256K1
@@ -154,10 +162,12 @@ pub(crate) fn is_forward_tx(bytes: &[u8]) -> Option<bool> {
         }
     };
 
+    // skip over `pub ttl: u8`
     let ttl_idx = signature_variant_idx + signature_field_len;
     let message_body_idx = ttl_idx + 1;
     let message_body_variant = *bytes.get(message_body_idx)?;
 
+    // check if type is `RoutedMessageBody::ForwardTx`
     Some(message_body_variant == 1)
 }
 
