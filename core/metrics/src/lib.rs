@@ -30,7 +30,6 @@ pub fn gather() -> Vec<prometheus::proto::MetricFamily> {
 
 /// Attempts to crate an `IntCounter`, returning `Err` if the registry does not accept the counter
 /// (potentially due to naming conflict).
-/// TODO: return IntCounter
 pub fn try_create_int_counter(name: &str, help: &str) -> Result<IntCounter> {
     let opts = Opts::new(name, help);
     let counter = IntCounter::with_opts(opts)?;
@@ -40,7 +39,6 @@ pub fn try_create_int_counter(name: &str, help: &str) -> Result<IntCounter> {
 
 /// Attempts to crate an `IntCounterVec`, returning `Err` if the registry does not accept the counter
 /// (potentially due to naming conflict).
-/// TODO: return IntCounterVec
 pub fn try_create_int_counter_vec(
     name: &str,
     help: &str,
@@ -54,7 +52,6 @@ pub fn try_create_int_counter_vec(
 
 /// Attempts to crate an `IntGauge`, returning `Err` if the registry does not accept the counter
 /// (potentially due to naming conflict).
-/// TODO: return IntGauge
 pub fn try_create_int_gauge(name: &str, help: &str) -> Result<IntGauge> {
     let opts = Opts::new(name, help);
     let gauge = IntGauge::with_opts(opts)?;
@@ -64,7 +61,6 @@ pub fn try_create_int_gauge(name: &str, help: &str) -> Result<IntGauge> {
 
 /// Attempts to crate a `Histogram`, returning `Err` if the registry does not accept the counter
 /// (potentially due to naming conflict).
-/// TODO: return Histogram
 pub fn try_create_histogram(name: &str, help: &str) -> Result<Histogram> {
     let opts = HistogramOpts::new(name, help);
     let histogram = Histogram::with_opts(opts)?;
@@ -74,7 +70,6 @@ pub fn try_create_histogram(name: &str, help: &str) -> Result<Histogram> {
 
 /// Attempts to create a `HistogramVector`, returning `Err` if the registry does not accept the counter
 /// (potentially due to naming conflict).
-/// TODO: return HistogramVec
 pub fn try_create_histogram_vec(
     name: &str,
     help: &str,
