@@ -110,6 +110,9 @@ pub(crate) fn bytes_to_peer_message(bytes: &[u8]) -> Result<PeerMessage, std::io
     PeerMessage::try_from_slice(bytes)
 }
 
+/// Determines size of `PublicKey` enum by it's binary representation.
+/// PublicKey::ED25519 -> 1 + 32 bytes
+/// PublicKey::SECP256K1 -> 1 + 64 bytes
 fn peer_id_type_field_len(enum_var: u8) -> Option<usize> {
     // 1 byte for enum variant, then some number depending on the
     // public key type
