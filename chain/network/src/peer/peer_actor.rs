@@ -38,7 +38,7 @@ use near_primitives::{logging, unwrap_option_or_return};
 use near_rate_limiter::ThrottleController;
 use near_rust_allocator_proxy::allocator::get_tid;
 
-use crate::peer::codec::{self, bytes_to_peer_message, peer_message_to_bytes, Codec};
+use crate::peer::codec::{self, peer_message_to_bytes, Codec};
 use crate::peer::tracker::Tracker;
 use crate::routing::edge::{Edge, EdgeInfo};
 use crate::stats::metrics::{self, NetworkMetrics};
@@ -589,7 +589,7 @@ impl PeerActor {
     /// Somehow checks if there is a version mismatch. How exactly you ask, that's a great question?
     /// TODO: Figure this out.
     fn try_to_decode_to_peer_message(&mut self, msg: &Vec<u8>) -> Option<PeerMessage> {
-        let mut peer_msg = match PeerMessage::try_from_slice(&msg) {
+        let peer_msg = match PeerMessage::try_from_slice(&msg) {
             Ok(peer_msg) => peer_msg,
             // err is std::io::Error
             // TODO: Document how exactly what is going on?
