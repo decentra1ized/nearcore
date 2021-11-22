@@ -26,6 +26,7 @@ use near_performance_metrics;
 use near_performance_metrics::framed_write::{FramedWrite, WriteHandler};
 use near_performance_metrics_macros::perf;
 use near_primitives::block::GenesisId;
+use near_primitives::borsh::maybestd::io::Error;
 use near_primitives::network::PeerId;
 use near_primitives::sharding::PartialEncodedChunk;
 use near_primitives::time::Clock;
@@ -566,43 +567,29 @@ impl PeerActor {
         false
     }
 
-    /// Decodes message using `BorshDeserialize
-    /// Somehow checks if there is a version mismatch. How exactly you ask, that's a great question?
-    /// TODO: Figure this out.
-    fn try_to_decode_to_peer_message(&mut self, msg: &Vec<u8>) -> Option<PeerMessage> {
-        let peer_msg = match bytes_to_peer_message(&msg) {
-            Ok(peer_msg) => peer_msg,
-            // err is std::io::Error
-            // TODO: Document how exactly what is going on?
-            Err(err) => {
-                if let Some(version) = err
-                    .get_ref()
-                    .and_then(|err| err.downcast_ref::<HandshakeFailureReason>())
-                    .and_then(|inner| {
-                        if let HandshakeFailureReason::ProtocolVersionMismatch { version, .. } =
-                            *inner
-                        {
-                            Some(version)
-                        } else {
-                            None
-                        }
-                    })
-                {
-                    debug!(target: "network", "Received connection from node with unsupported version: {}", version);
-                    self.send_message(&PeerMessage::HandshakeFailure(
-                        self.node_info.clone(),
-                        HandshakeFailureReason::ProtocolVersionMismatch {
-                            version: PROTOCOL_VERSION,
-                            oldest_supported_version: OLDEST_BACKWARD_COMPATIBLE_PROTOCOL_VERSION,
-                        },
-                    ));
+    fn handle_peer_message_decode_error(&mut self, msg: &Vec<u8>, err: Error) {
+        if let Some(version) = err
+            .get_ref()
+            .and_then(|err| err.downcast_ref::<HandshakeFailureReason>())
+            .and_then(|inner| {
+                if let HandshakeFailureReason::ProtocolVersionMismatch { version, .. } = *inner {
+                    Some(version)
                 } else {
-                    info!(target: "network", "Received invalid data {:?} from {}: {}", logging::pretty_vec(&msg), self.peer_info, err);
+                    None
                 }
-                return None;
-            }
-        };
-        Some(peer_msg)
+            })
+        {
+            debug!(target: "network", "Received connection from node with unsupported version: {}", version);
+            self.send_message(&PeerMessage::HandshakeFailure(
+                self.node_info.clone(),
+                HandshakeFailureReason::ProtocolVersionMismatch {
+                    version: PROTOCOL_VERSION,
+                    oldest_supported_version: OLDEST_BACKWARD_COMPATIBLE_PROTOCOL_VERSION,
+                },
+            ));
+        } else {
+            info!(target: "network", "Received invalid data {:?} from {}: {}", logging::pretty_vec(&msg), self.peer_info, err);
+        }
     }
 }
 
@@ -683,9 +670,12 @@ impl StreamHandler<Result<Vec<u8>, ReasonForBan>> for PeerActor {
             return;
         }
 
-        let mut peer_msg = match self.try_to_decode_to_peer_message(&msg) {
-            Some(peer_msg) => peer_msg,
-            None => return,
+        let mut peer_msg = match bytes_to_peer_message(&msg) {
+            Ok(peer_msg) => peer_msg,
+            Err(err) => {
+                self.handle_peer_message_decode_error(&msg, err);
+                return;
+            }
         };
 
         // Drop duplicated messages routed within DROP_DUPLICATED_MESSAGES_PERIOD ms
