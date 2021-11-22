@@ -547,24 +547,6 @@ impl PeerActor {
         }
     }
 
-    /// Check whenever `Codec::decode` method banned peer for message being too long.
-    /// If so bans peers
-    /// or returns the decoded message.
-    fn check_if_decoder_banned_peer(
-        &mut self,
-        msg: Result<Vec<u8>, ReasonForBan>,
-        ctx: &mut Context<PeerActor>,
-    ) -> Option<Vec<u8>> {
-        let msg = match msg {
-            Ok(msg) => msg,
-            Err(ban_reason) => {
-                self.ban_peer(ctx, ban_reason);
-                return None;
-            }
-        };
-        Some(msg)
-    }
-
     /// Update stats when receiving msg
     fn update_stats_on_receiving_message(&mut self, msg_len: usize) {
         metrics::PEER_DATA_RECEIVED_BYTES.inc_by(msg_len as u64);
@@ -574,7 +556,7 @@ impl PeerActor {
 
     /// Check whenever we exceeded number of transactions we got since last block.
     /// If so, drop the transaction.
-    fn should_we_drop_msg_without_decoding(&mut self, msg: &Vec<u8>) -> bool {
+    fn should_we_drop_msg_without_decoding(&self, msg: &Vec<u8>) -> bool {
         if codec::is_forward_transaction(&msg).unwrap_or(false) {
             let r = self.txns_since_last_block.load(Ordering::Acquire);
             if r > MAX_TRANSACTIONS_PER_BLOCK_MESSAGE {
@@ -685,10 +667,12 @@ impl WriteHandler<io::Error> for PeerActor {}
 impl StreamHandler<Result<Vec<u8>, ReasonForBan>> for PeerActor {
     #[perf]
     fn handle(&mut self, msg: Result<Vec<u8>, ReasonForBan>, ctx: &mut Self::Context) {
-        let msg = if let Some(msg) = self.check_if_decoder_banned_peer(msg, ctx) {
-            msg
-        } else {
-            return;
+        let msg = match msg {
+            Ok(msg) => msg,
+            Err(ban_reason) => {
+                self.ban_peer(ctx, ban_reason);
+                return;
+            }
         };
         // TODO(#5155) We should change our code to track size of messages received from Peer
         // as long as it travels to PeerManager, etc.
@@ -699,10 +683,9 @@ impl StreamHandler<Result<Vec<u8>, ReasonForBan>> for PeerActor {
             return;
         }
 
-        let mut peer_msg = if let Some(peer_msg) = self.try_to_decode_to_peer_message(&msg) {
-            peer_msg
-        } else {
-            return;
+        let mut peer_msg = match self.try_to_decode_to_peer_message(&msg) {
+            Some(peer_msg) => peer_msg,
+            None => return,
         };
 
         // Drop duplicated messages routed within DROP_DUPLICATED_MESSAGES_PERIOD ms
