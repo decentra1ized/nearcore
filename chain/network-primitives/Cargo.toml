@@ -16,9 +16,10 @@ borsh = "0.9"
 serde = { version = "1", features = ["derive", "rc", "alloc"] }
 strum = { version = "0.20", features = ["derive"] }
 tracing = "0.1.13"
+deepsize = "0.2.0"
 
 near-crypto = { path = "../../core/crypto" }
-near-primitives = { path = "../../core/primitives" }
+near-primitives = { path = "../../core/primitives", features = ["deepsize_feature"] }
 
 [features]
 test_features = []

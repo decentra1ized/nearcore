@@ -1,7 +1,7 @@
 use crate::time::Utc;
 use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::DateTime;
-#[cfg(feature = "deepsize")]
+#[cfg(feature = "deepsize_feature")]
 use deepsize::DeepSizeOf;
 use serde::Serialize;
 
@@ -17,7 +17,7 @@ use crate::utils::{from_timestamp, to_timestamp};
 use crate::validator_signer::ValidatorSigner;
 use crate::version::{ProtocolVersion, PROTOCOL_VERSION};
 
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct BlockHeaderInnerLite {
     /// Height of this block.
@@ -38,7 +38,7 @@ pub struct BlockHeaderInnerLite {
     pub block_merkle_root: CryptoHash,
 }
 
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct BlockHeaderInnerRest {
     /// Root hash of the chunk receipts in the given block.
@@ -77,7 +77,7 @@ pub struct BlockHeaderInnerRest {
 }
 
 /// Remove `chunks_included` from V1
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct BlockHeaderInnerRestV2 {
     /// Root hash of the chunk receipts in the given block.
@@ -118,7 +118,7 @@ pub struct BlockHeaderInnerRestV2 {
 /// Add `epoch_sync_data_hash`
 /// Use new `ValidatorStake` struct
 #[cfg(feature = "protocol_feature_block_header_v3")]
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct BlockHeaderInnerRestV3 {
     /// Root hash of the chunk receipts in the given block.
@@ -162,7 +162,7 @@ pub struct BlockHeaderInnerRestV3 {
 }
 
 /// The part of the block approval that is different for endorsements and skips
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ApprovalInner {
     Endorsement(CryptoHash),
@@ -170,7 +170,7 @@ pub enum ApprovalInner {
 }
 
 /// Block approval by other block producers with a signature
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct Approval {
     pub inner: ApprovalInner,
@@ -187,7 +187,7 @@ pub enum ApprovalType {
 }
 
 /// Block approval by other block producers.
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct ApprovalMessage {
     pub approval: Approval,
@@ -231,7 +231,7 @@ impl ApprovalMessage {
     }
 }
 
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 #[borsh_init(init)]
 pub struct BlockHeaderV1 {
@@ -261,7 +261,7 @@ impl BlockHeaderV1 {
 }
 
 /// V1 -> V2: Remove `chunks_included` from `inner_reset`
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 #[borsh_init(init)]
 pub struct BlockHeaderV2 {
@@ -283,7 +283,7 @@ pub struct BlockHeaderV2 {
 /// V2 -> V3: Add `prev_height` to `inner_rest` and use new `ValidatorStake`
 // Add `block_ordinal` to `inner_rest`
 #[cfg(feature = "protocol_feature_block_header_v3")]
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 #[borsh_init(init)]
 pub struct BlockHeaderV3 {
@@ -324,7 +324,7 @@ impl BlockHeaderV3 {
 
 /// Versioned BlockHeader data structure.
 /// For each next version, document what are the changes between versions.
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 pub enum BlockHeader {
     BlockHeaderV1(Box<BlockHeaderV1>),

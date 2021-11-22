@@ -1,4 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
+use deepsize::DeepSizeOf;
 use near_crypto::{KeyType, SecretKey, Signature};
 use near_primitives::borsh::maybestd::sync::Arc;
 use near_primitives::hash::CryptoHash;
@@ -8,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 /// Information that will be ultimately used to create a new edge.
 /// It contains nonce proposed for the edge with signature from peer.
-#[derive(Clone, BorshSerialize, BorshDeserialize, PartialEq, Eq, Debug, Default)]
+#[derive(Clone, BorshSerialize, BorshDeserialize, PartialEq, Eq, Debug, Default, DeepSizeOf)]
 pub struct EdgeInfo {
     pub nonce: u64,
     pub signature: Signature,
@@ -26,7 +27,7 @@ impl EdgeInfo {
     }
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq, Eq, DeepSizeOf)]
 #[cfg_attr(feature = "test_features", derive(Serialize, Deserialize))]
 pub struct Edge(pub Arc<EdgeInner>);
 
@@ -217,7 +218,7 @@ impl Edge {
 
 /// Edge object. Contains information relative to a new edge that is being added or removed
 /// from the network. This is the information that is required.
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq, Eq, DeepSizeOf)]
 #[cfg_attr(feature = "test_features", derive(Serialize, Deserialize))]
 pub struct EdgeInner {
     /// Since edges are not directed `key.0 < peer1` should hold.
@@ -258,7 +259,7 @@ impl EdgeInner {
 }
 
 /// Represents edge between two nodes. Unlike `Edge` it doesn't contain signatures.
-#[derive(Hash, Clone, Eq, PartialEq, Debug)]
+#[derive(Hash, Clone, Eq, PartialEq, Debug, DeepSizeOf)]
 #[cfg_attr(feature = "test_features", derive(Serialize, Deserialize))]
 pub struct SimpleEdge {
     key: (PeerId, PeerId),

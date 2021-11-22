@@ -1,3 +1,4 @@
+use deepsize::DeepSizeOf;
 #[cfg(feature = "ser_de")]
 use near_jsonrpc_primitives::errors::RpcError;
 use near_network::routing::{Edge, SimpleEdge};
@@ -8,6 +9,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 #[cfg_attr(feature = "ser_de", derive(Deserialize))]
+#[derive(DeepSizeOf)]
 pub struct SetRoutingTableRequest {
     pub add_edges: Option<Vec<Edge>>,
     pub remove_edges: Option<Vec<SimpleEdge>>,

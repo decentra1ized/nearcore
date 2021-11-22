@@ -2,6 +2,7 @@ use actix::dev::{MessageResponse, ResponseChannel};
 use actix::{Actor, Message};
 use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::DateTime;
+use deepsize::{Context, DeepSizeOf};
 use near_crypto::{KeyType, PublicKey, SecretKey, Signature};
 use near_primitives::block::{Approval, Block, BlockHeader, GenesisId};
 use near_primitives::hash::CryptoHash;
@@ -49,6 +50,12 @@ pub struct PeerInfo {
     pub id: PeerId,
     pub addr: Option<SocketAddr>,
     pub account_id: Option<AccountId>,
+}
+
+impl DeepSizeOf for PeerInfo {
+    fn deep_size_of_children(&self, context: &mut Context) -> usize {
+        self.id.deep_size_of_children(context) + self.account_id.deep_size_of_children(context)
+    }
 }
 
 impl PeerInfo {
@@ -121,7 +128,7 @@ impl TryFrom<&str> for PeerInfo {
 
 /// Peer chain information.
 /// TODO: Remove in next version
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq, Default)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq, Default, DeepSizeOf)]
 pub struct PeerChainInfo {
     /// Chain Id and hash of genesis block.
     pub genesis_id: GenesisId,
@@ -132,7 +139,7 @@ pub struct PeerChainInfo {
 }
 
 /// Peer chain information.
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq, Default)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq, Default, DeepSizeOf)]
 pub struct PeerChainInfoV2 {
     /// Chain Id and hash of genesis block.
     pub genesis_id: GenesisId,
@@ -156,7 +163,7 @@ impl From<PeerChainInfo> for PeerChainInfoV2 {
 }
 
 /// Peer type.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, DeepSizeOf)]
 pub enum PeerType {
     /// Inbound session
     Inbound,
@@ -165,7 +172,7 @@ pub enum PeerType {
 }
 
 /// Peer status.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, DeepSizeOf)]
 pub enum PeerStatus {
     /// Waiting for handshake.
     Connecting,
@@ -176,20 +183,20 @@ pub enum PeerStatus {
 }
 
 /// Account route description
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub struct AnnounceAccountRoute {
     pub peer_id: PeerId,
     pub hash: CryptoHash,
     pub signature: Signature,
 }
 
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub struct Ping {
     pub nonce: u64,
     pub source: PeerId,
 }
 
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub struct Pong {
     pub nonce: u64,
     pub source: PeerId,
@@ -204,6 +211,7 @@ pub struct Pong {
     Clone,
     strum::AsStaticStr,
     strum::EnumVariantNames,
+    DeepSizeOf,
 )]
 #[allow(clippy::large_enum_variant)]
 pub enum RoutedMessageBody {
@@ -313,13 +321,13 @@ impl Debug for RoutedMessageBody {
     }
 }
 
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug, Hash, DeepSizeOf)]
 pub enum PeerIdOrHash {
     PeerId(PeerId),
     Hash(CryptoHash),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize, Hash, DeepSizeOf)]
 // Defines the destination for a network request.
 // The request should be sent either to the `account_id` as a routed message, or directly to
 // any peer that tracks the shard.
@@ -339,7 +347,7 @@ impl AccountIdOrPeerTrackingShard {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize, Hash, DeepSizeOf)]
 pub enum AccountOrPeerIdOrHash {
     AccountId(AccountId),
     PeerId(PeerId),
@@ -393,7 +401,7 @@ pub struct RoutedMessageNoSignature<'a> {
 /// sender of the package should be banned instead.
 /// If target is hash, it is a message that should be routed back using the same path used to route
 /// the request in first place. It is the hash of the request message.
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug, DeepSizeOf)]
 pub struct RoutedMessage {
     /// Peer id which is directed this message.
     /// If `target` is hash, this a message should be routed back.
@@ -448,7 +456,7 @@ impl RoutedMessage {
 }
 
 /// Routed Message wrapped with previous sender of the message.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, DeepSizeOf)]
 pub struct RoutedMessageFrom {
     /// Routed messages.
     pub msg: RoutedMessage,
@@ -689,6 +697,12 @@ pub struct InboundTcpConnect {
     pub stream: TcpStream,
 }
 
+impl DeepSizeOf for InboundTcpConnect {
+    fn deep_size_of_children(&self, _context: &mut Context) -> usize {
+        0
+    }
+}
+
 impl InboundTcpConnect {
     /// Method to create a new InboundTcpConnect message from a TCP stream
     pub fn new(stream: TcpStream) -> InboundTcpConnect {
@@ -697,7 +711,7 @@ impl InboundTcpConnect {
 }
 
 /// Actor message to request the creation of an outbound TCP connection to a peer.
-#[derive(Message, Clone, Debug)]
+#[derive(Message, Clone, Debug, DeepSizeOf)]
 #[rtype(result = "()")]
 pub struct OutboundTcpConnect {
     /// Peer information of the outbound connection
@@ -705,7 +719,7 @@ pub struct OutboundTcpConnect {
 }
 
 /// Unregister message from Peer to PeerManager.
-#[derive(Message)]
+#[derive(Message, DeepSizeOf)]
 #[rtype(result = "()")]
 pub struct Unregister {
     pub peer_id: PeerId,
@@ -744,7 +758,9 @@ where
 }
 
 /// Ban reason.
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(
+    BorshSerialize, BorshDeserialize, Serialize, Debug, Clone, PartialEq, Eq, Copy, DeepSizeOf,
+)]
 pub enum ReasonForBan {
     None = 0,
     BadBlock = 1,
@@ -764,7 +780,7 @@ pub enum ReasonForBan {
 
 /// Banning signal sent from Peer instance to PeerManager
 /// just before Peer instance is stopped.
-#[derive(Message, Debug)]
+#[derive(Message, Debug, DeepSizeOf)]
 #[rtype(result = "()")]
 pub struct Ban {
     pub peer_id: PeerId,
@@ -791,21 +807,27 @@ pub struct KnownProducer {
     pub peer_id: PeerId,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize)]
+impl DeepSizeOf for KnownProducer {
+    fn deep_size_of_children(&self, context: &mut Context) -> usize {
+        self.account_id.deep_size_of_children(context) + self.peer_id.deep_size_of_children(context)
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize, DeepSizeOf)]
 pub struct StateResponseInfoV1 {
     pub shard_id: ShardId,
     pub sync_hash: CryptoHash,
     pub state_response: ShardStateSyncResponseV1,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize)]
+#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize, DeepSizeOf)]
 pub struct StateResponseInfoV2 {
     pub shard_id: ShardId,
     pub sync_hash: CryptoHash,
     pub state_response: ShardStateSyncResponse,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize)]
+#[derive(PartialEq, Eq, Clone, Debug, BorshSerialize, BorshDeserialize, DeepSizeOf)]
 pub enum StateResponseInfo {
     V1(StateResponseInfoV1),
     V2(StateResponseInfoV2),
@@ -969,14 +991,14 @@ impl Message for QueryPeerStats {
     type Result = PeerStatsResult;
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize, DeepSizeOf)]
 pub struct PartialEncodedChunkRequestMsg {
     pub chunk_hash: ChunkHash,
     pub part_ords: Vec<u64>,
     pub tracking_shards: HashSet<ShardId>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize, DeepSizeOf)]
 pub struct PartialEncodedChunkResponseMsg {
     pub chunk_hash: ChunkHash,
     pub parts: Vec<PartialEncodedChunkPart>,
@@ -986,7 +1008,7 @@ pub struct PartialEncodedChunkResponseMsg {
 /// Message for chunk part owners to forward their parts to validators tracking that shard.
 /// This reduces the number of requests a node tracking a shard needs to send to obtain enough
 /// parts to reconstruct the message (in the best case no such requests are needed).
-#[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize, DeepSizeOf)]
 pub struct PartialEncodedChunkForwardMsg {
     pub chunk_hash: ChunkHash,
     pub inner_header_hash: CryptoHash,

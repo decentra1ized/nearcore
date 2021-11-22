@@ -8,10 +8,10 @@ use std::str::FromStr;
 use borsh::{BorshDeserialize, BorshSerialize};
 // We need to import ed25519::signature::Signature, because we use traits from those structs.
 // However, `Signature` symbol is already used to define a different data structure.
-#[cfg(feature = "deepsize")]
+#[cfg(feature = "deepsize_feature")]
 use deepsize::{Context, DeepSizeOf};
 use ed25519_dalek::ed25519::signature::{Signature as _Signature, Signer, Verifier};
-#[cfg(feature = "deepsize")]
+#[cfg(feature = "deepsize_feature")]
 use ed25519_dalek::SIGNATURE_LENGTH;
 use lazy_static::lazy_static;
 use primitive_types::U256;
@@ -82,7 +82,7 @@ fn split_key_type_data(value: &str) -> Result<(KeyType, &str), crate::errors::Pa
 #[derive(Copy, Clone)]
 pub struct Secp256K1PublicKey([u8; 64]);
 
-#[cfg(feature = "deepsize")]
+#[cfg(feature = "deepsize_feature")]
 impl DeepSizeOf for Secp256K1PublicKey {
     fn deep_size_of_children(&self, _context: &mut Context) -> usize {
         0
@@ -155,7 +155,7 @@ impl Ord for Secp256K1PublicKey {
     }
 }
 
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(Copy, Clone, derive_more::AsRef)]
 #[as_ref(forward)]
 pub struct ED25519PublicKey(pub [u8; ed25519_dalek::PUBLIC_KEY_LENGTH]);
@@ -204,7 +204,7 @@ impl Ord for ED25519PublicKey {
 }
 
 /// Public key container supporting different curves.
-#[cfg_attr(feature = "deepsize", derive(DeepSizeOf))]
+#[cfg_attr(feature = "deepsize_feature", derive(DeepSizeOf))]
 #[derive(Clone, PartialEq, PartialOrd, Ord, Eq)]
 pub enum PublicKey {
     ED25519(ED25519PublicKey),
@@ -685,7 +685,7 @@ pub enum Signature {
     SECP256K1(Secp256K1Signature),
 }
 
-#[cfg(feature = "deepsize")]
+#[cfg(feature = "deepsize_feature")]
 impl DeepSizeOf for Signature {
     fn deep_size_of_children(&self, _context: &mut Context) -> usize {
         match self {

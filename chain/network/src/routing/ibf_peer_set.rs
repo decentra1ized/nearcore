@@ -1,13 +1,14 @@
 use crate::routing::edge::{Edge, SimpleEdge};
 use crate::routing::ibf_set::IbfSet;
 use borsh::{BorshDeserialize, BorshSerialize};
+use deepsize::DeepSizeOf;
 use near_primitives::network::PeerId;
 use rand::Rng;
 use std::collections::HashMap;
 
 pub type SlotMapId = u64;
 
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug, Copy)]
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Eq, Clone, Debug, Copy, DeepSizeOf)]
 pub struct ValidIBFLevel(pub u64);
 
 /// We create IbfSets of various sizes from 2^10+2 up to 2^17+2. Those constants specify valid ranges.
