@@ -130,7 +130,7 @@ pub(crate) fn is_forward_tx(bytes: &[u8]) -> Option<bool> {
         return Some(false);
     }
 
-    // skip over `pub target: PeerIdOrHash` attribute`
+    // target: PeerIdOrHash
     let author_variant_idx = {
         let target_field_len = {
             let target_field_variant = *bytes.get(1)?;
@@ -149,7 +149,7 @@ pub(crate) fn is_forward_tx(bytes: &[u8]) -> Option<bool> {
         2 + target_field_len
     };
 
-    // skip over `pub author: PeerId`
+    // author: PeerId
     let signature_variant_idx = {
         let author_variant = *bytes.get(author_variant_idx)?;
         let author_field_len = peer_id_type_field_len(author_variant)?;
@@ -157,11 +157,11 @@ pub(crate) fn is_forward_tx(bytes: &[u8]) -> Option<bool> {
         author_variant_idx + author_field_len
     };
 
-    // skip over `pub ttl: u8`
+    // ttl: u8
     let ttl_idx = {
         let signature_variant = *bytes.get(signature_variant_idx)?;
 
-        // skip over `pub signature: Signature`
+        // pub signature: Signature
         let signature_field_len = match signature_variant {
             0 => 1 + 64, // Signature::ED25519
             1 => 1 + 65, // Signature::SECP256K1
@@ -172,7 +172,7 @@ pub(crate) fn is_forward_tx(bytes: &[u8]) -> Option<bool> {
         signature_variant_idx + signature_field_len
     };
 
-    // skip over `pub ttl: u8`
+    // pub ttl: u8
     let message_body_idx = ttl_idx + 1;
 
     // check if type is `RoutedMessageBody::ForwardTx`
