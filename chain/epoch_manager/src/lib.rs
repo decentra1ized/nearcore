@@ -42,7 +42,7 @@ mod shard_assignment;
 pub mod test_utils;
 mod tests;
 mod types;
-#[cfg(feature = "protocol_feature_chunk_only_producers")]
+#[cfg(feature = "protocol_feature_new_validator_selection_algorithm")]
 mod validator_selection;
 
 const EPOCH_CACHE_SIZE: usize = if cfg!(feature = "no_cache") { 1 } else { 50 };
@@ -429,7 +429,7 @@ impl EpochManager {
                 *epoch_info.epoch_height_mut() += 1;
                 epoch_info
             }
-            #[cfg(feature = "protocol_feature_chunk_only_producers")]
+            #[cfg(feature = "protocol_feature_new_validator_selection_algorithm")]
             Err(EpochError::NotEnoughValidators { num_validators, num_shards }) => {
                 warn!(target: "epoch_manager", "Not enough validators for required number of shards (all validators tried to unstake?): num_validators={} num_shards={}", num_validators, num_shards);
                 let mut epoch_info = next_epoch_info.clone();
@@ -1175,7 +1175,7 @@ impl EpochManager {
         Ok(false)
     }
 
-    #[cfg(not(feature = "protocol_feature_chunk_only_producers"))]
+    #[cfg(not(feature = "protocol_feature_new_validator_selection_algorithm"))]
     pub(crate) fn block_producer_from_info(
         epoch_info: &EpochInfo,
         height: BlockHeight,
@@ -1184,7 +1184,7 @@ impl EpochManager {
         bp_settlement[(height as u64 % (bp_settlement.len() as u64)) as usize]
     }
 
-    #[cfg(not(feature = "protocol_feature_chunk_only_producers"))]
+    #[cfg(not(feature = "protocol_feature_new_validator_selection_algorithm"))]
     pub(crate) fn chunk_producer_from_info(
         epoch_info: &EpochInfo,
         height: BlockHeight,
@@ -1195,7 +1195,7 @@ impl EpochManager {
         shard_cps[(height as u64 % (shard_cps.len() as u64)) as usize]
     }
 
-    #[cfg(feature = "protocol_feature_chunk_only_producers")]
+    #[cfg(feature = "protocol_feature_new_validator_selection_algorithm")]
     #[inline]
     pub(crate) fn block_producer_from_info(
         epoch_info: &EpochInfo,
@@ -1204,7 +1204,7 @@ impl EpochManager {
         epoch_info.sample_block_producer(height)
     }
 
-    #[cfg(feature = "protocol_feature_chunk_only_producers")]
+    #[cfg(feature = "protocol_feature_new_validator_selection_algorithm")]
     #[inline]
     pub(crate) fn chunk_producer_from_info(
         epoch_info: &EpochInfo,
@@ -1495,7 +1495,7 @@ mod tests2 {
     use near_primitives::version::PROTOCOL_VERSION;
     use near_store::test_utils::create_test_store;
 
-    #[cfg(not(feature = "protocol_feature_chunk_only_producers"))]
+    #[cfg(not(feature = "protocol_feature_new_validator_selection_algorithm"))]
     use crate::test_utils::epoch_info;
     use crate::test_utils::{
         block_info, change_stake, default_reward_calculator, epoch_config,
@@ -3244,7 +3244,7 @@ mod tests2 {
     }
 
     // This test only makes sense with the old validator selection
-    #[cfg(not(feature = "protocol_feature_chunk_only_producers"))]
+    #[cfg(not(feature = "protocol_feature_new_validator_selection_algorithm"))]
     #[test]
     fn test_validator_consistency_not_all_same_stake() {
         let stake_amount1 = 1_000;
@@ -3873,7 +3873,7 @@ mod tests2 {
             protocol_upgrade_num_epochs: 2,
             minimum_stake_divisor: 1,
             shard_layout: ShardLayout::default(),
-            #[cfg(feature = "protocol_feature_chunk_only_producers")]
+            #[cfg(feature = "protocol_feature_new_validator_selection_algorithm")]
             validator_selection_config: Default::default(),
         };
         let config = AllEpochConfig::new(epoch_config, None);
