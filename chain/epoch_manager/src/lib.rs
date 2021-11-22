@@ -40,6 +40,7 @@ mod reward_calculator;
 #[cfg(feature = "protocol_feature_chunk_only_producers")]
 mod shard_assignment;
 pub mod test_utils;
+mod tests;
 mod types;
 #[cfg(feature = "protocol_feature_chunk_only_producers")]
 mod validator_selection;
