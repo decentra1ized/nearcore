@@ -104,10 +104,10 @@ const UPDATE_ROUTING_TABLE_INTERVAL: Duration = Duration::from_millis(1_000);
 
 /// Max number of messages we received from peer, and they are in progress, before we start throttling.
 /// Disabled for now (TODO PUT UNDER FEATURE FLAG)
-const MAX_MESSAGES_COUNT: usize = 0; // 20;
+const MAX_MESSAGES_COUNT: usize = usize::MAX;
 /// Max total size of all messages that are in progress, before we start throttling.
 /// Disabled for now (TODO PUT UNDER FEATURE FLAG)
-const MAX_MESSAGES_TOTAL_SIZE: usize = 500_000_000;
+const MAX_MESSAGES_TOTAL_SIZE: usize = usize::MAX;
 
 macro_rules! unwrap_or_error(($obj: expr, $error: expr) => (match $obj {
     Ok(result) => result,

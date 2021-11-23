@@ -103,11 +103,9 @@ impl ThrottleController {
 
     // Check whenever
     fn is_ready(&self) -> bool {
-        ((self.num_messages_in_progress.load(Ordering::SeqCst) < self.max_num_messages_in_progress)
-            || self.max_num_messages_in_progress == 0)
-            && ((self.total_sizeof_messages_in_progress.load(Ordering::SeqCst)
+        (self.num_messages_in_progress.load(Ordering::SeqCst) < self.max_num_messages_in_progress)
+            && (self.total_sizeof_messages_in_progress.load(Ordering::SeqCst)
                 < self.max_total_sizeof_messages_in_progress)
-                || self.max_total_sizeof_messages_in_progress == 0)
     }
 
     // Increase limits by size of the message
@@ -127,6 +125,8 @@ impl ThrottleController {
         }
 
         // Notify throttled framed reader
+        // We want to wake up the caller at least once.
+        // If `available_permits()` is non-0 then the reader is already scheduled to be woken up.
         if self.semaphore.available_permits() == 0 {
             self.semaphore.add_permits(1);
         }
