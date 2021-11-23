@@ -58,9 +58,12 @@ pub struct ThrottleController {
     semaphore: PollSemaphore,
 }
 
-// NB: deliberately not `Clone`
+/// Stores metadata about size of message, which is currently tracked by `ThrottleController`.
+/// Only one instance of this struct should exist, that's why there is no close.
 pub struct ThrottleToken {
+    /// Represents limits for `PeerActorManager`
     throttle_controller: ThrottleController,
+    /// Size of message tracked.
     msg_len: usize,
 }
 
@@ -101,14 +104,15 @@ impl ThrottleController {
         }
     }
 
-    // Check whenever
+    /// Check whenever `ThrottleFrameRead` is allowed to read from socket.
+    /// That is, we didn't exceed limits yet.
     fn is_ready(&self) -> bool {
         (self.num_messages_in_progress.load(Ordering::SeqCst) < self.max_num_messages_in_progress)
             && (self.total_sizeof_messages_in_progress.load(Ordering::SeqCst)
                 < self.max_total_sizeof_messages_in_progress)
     }
 
-    // Increase limits by size of the message
+    /// Tracks the message and increase limits by size of the message.
     pub fn add_msg(&self, msg_size: usize) {
         self.num_messages_in_progress.fetch_add(1, Ordering::SeqCst);
         if msg_size != 0 {
@@ -116,18 +120,17 @@ impl ThrottleController {
         }
     }
 
-    // Decrease limits by size of the message and notify ThrottledFramedReader to try to
-    // read again
+    /// Un-tracks the message and decreases limits by size of the message and notifies
+    /// `ThrottledFramedReader` to try to read again
     pub fn remove_msg(&mut self, msg_size: usize) {
         self.num_messages_in_progress.fetch_sub(1, Ordering::SeqCst);
         if msg_size != 0 {
             self.total_sizeof_messages_in_progress.fetch_sub(msg_size, Ordering::SeqCst);
         }
 
-        // Notify throttled framed reader
-        // We want to wake up the caller at least once.
-        // If `available_permits()` is non-0 then the reader is already scheduled to be woken up.
+        // If `ThrottledFramedReader` is not scheduled to read.
         if self.semaphore.available_permits() == 0 {
+            // Notify throttled framed reader to start readin
             self.semaphore.add_permits(1);
         }
     }
